@@ -60,8 +60,14 @@ export function apply(ctx: Context): void {
   }
 
   services.effect(() => {
+    openDeepLink(services)
+  }, 'dsh-notify: deep link')
+
+  const clientId = tabId()
+  services.effect(() => {
     const send = (): void => {
       void reportPresence({
+        clientId,
         visible: document.visibilityState === 'visible',
         focused: document.hasFocus(),
         sessionId: null,
@@ -103,6 +109,39 @@ function alreadyShown(id: string): boolean {
     return false
   } catch {
     return false
+  }
+}
+
+/**
+ * Open the session a push pointed at.
+ *
+ * The Host's deep link carries `?session=<id>`; the query is removed after use
+ * so a reload does not yank the person back to an old conversation.
+ */
+function openDeepLink(services: ClientServices): void {
+  try {
+    const url = new URL(window.location.href)
+    const target = url.searchParams.get('session') ?? new URLSearchParams(url.hash.replace(/^#/, '')).get('session')
+    if (target === null || target.length === 0) return
+    services.uiWorkspace.openSession(target)
+    url.searchParams.delete('session')
+    window.history.replaceState(null, '', url.toString())
+  } catch {
+    // A deep link that cannot be parsed is not worth breaking the page over.
+  }
+}
+
+/** A stable identity for this tab, so presence from several tabs can be told apart. */
+function tabId(): string {
+  const key = 'dsh-notify:client-id'
+  try {
+    const existing = sessionStorage.getItem(key)
+    if (existing !== null && existing.length > 0) return existing
+    const created = crypto.randomUUID()
+    sessionStorage.setItem(key, created)
+    return created
+  } catch {
+    return 'anonymous'
   }
 }
 

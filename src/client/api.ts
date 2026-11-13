@@ -70,7 +70,7 @@ export async function testChannel(channel: 'browser' | 'bark'): Promise<TestResu
  * session on screen. Failures are ignored: presence is an optimisation, never
  * a requirement.
  */
-export async function reportPresence(presence: { visible: boolean; focused: boolean; sessionId: string | null }): Promise<void> {
+export async function reportPresence(presence: { clientId: string; visible: boolean; focused: boolean; sessionId: string | null }): Promise<void> {
   try {
     await fetch('/api/dsh-notify/presence', {
       method: 'POST',

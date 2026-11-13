@@ -24,8 +24,13 @@ function fakeHost(dir: string): FakeHost {
       if (typeof off === 'function') teardown.push(off)
     },
     logger: { warn: () => {} },
-    profileContext: { dir },
-    sessionTitle: { get: () => ({ title: 'Fix the build' }) },
+    // Cordis refuses a plain property read for an uninjected service; the fake
+    // Host mirrors that rule so the plugin cannot regress into it.
+    get: (name: string) => {
+      if (name === 'profileContext') return { dir }
+      if (name === 'sessionTitle') return { get: () => ({ title: 'Fix the build' }) }
+      throw new Error(`cannot get property "${name}" without inject`)
+    },
     connection: {
       fetch: {
         register: (route: { path: string }) => {
@@ -158,7 +163,7 @@ describe('plugin wiring', () => {
     await stream.fetch(new Request('http://x/api/dsh-notify/stream'))
     await host.routes.get('/api/dsh-notify/presence')!.fetch(new Request('http://x/api/dsh-notify/presence', {
       method: 'POST',
-      body: JSON.stringify({ visible: true, focused: true, sessionId: null }),
+      body: JSON.stringify({ clientId: 'tab-1', visible: true, focused: true, sessionId: null }),
     }))
     const state = await (await host.routes.get('/api/dsh-notify/state')!.fetch(new Request('http://x/api/dsh-notify/state'))).json() as {
       browsers: number

@@ -23,8 +23,13 @@ export interface DshHost {
   effect(disposer: () => (() => void) | void, label?: string): unknown
   /** Host logger. */
   readonly logger?: { warn?: (message: string) => void }
-  /** Auto-derived profile directory service, when the composition provides it. */
-  readonly profileContext?: { readonly dir?: string }
+  /**
+   * Read one optional Cordis service.
+   *
+   * Cordis refuses a plain property read for a service this plugin did not
+   * declare in `inject`, so every optional service is read through this method.
+   */
+  get(name: string): unknown
   /** Folded session titles, when the composition provides the service. */
   readonly sessionTitle?: { get(session: unknown): { title?: string | null } | undefined }
   /** Connection: authenticated HTTP carrier. */

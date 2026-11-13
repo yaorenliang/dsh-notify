@@ -66,11 +66,11 @@ export function apply(ctx: Context): void {
   const hub = new SseHub()
   const memories = new Map<string, SessionMemory>()
   const settling = new Map<string, ReturnType<typeof setTimeout>>()
-  let presence: Presence | null = null
+  const presenceByClient = new Map<string, Presence>()
 
   const dispatcher = new Dispatcher({
     config: () => store.get(),
-    presence: () => presence,
+    presence: () => effectivePresence(),
     browser: (event, title) => hub.broadcast({ event: 'notification', data: JSON.stringify({ ...event, title }) }),
     bark: (event, title) => pushBark(store.get(), event, title),
     log: (message) => host.logger?.warn?.(message),
@@ -135,6 +135,17 @@ export function apply(ctx: Context): void {
   })
 
   host.on('user-questions/request', (request: QuestionRequestLike, next: () => Promise<unknown>) => {
+    try {
+      notifyQuestion(request)
+    } catch (error) {
+      host.logger?.warn?.(`dsh-notify: question notification failed: ${String(error)}`)
+    }
+    // A waterfall listener that skips next() would swallow the question.
+    return next()
+  })
+
+  /** Announce one pending question, if the request names a session. */
+  function notifyQuestion(request: QuestionRequestLike): void {
     const session = request.agent?.session
     if (session !== undefined) {
       const lines = (request.questions ?? []).map((question) => {
@@ -145,26 +156,35 @@ export function apply(ctx: Context): void {
         return `${header}${question.question}${options}`
       })
       const locale = resolveLocale(store.get().locale, hostLanguageTag())
+      const first = (request.questions ?? [])[0]?.question ?? 'question'
       dispatch({
-        id: `question:${session.id}:${Date.now()}`,
+        // One pending question per call; the text is the stable fallback when
+        // the Host does not stamp a call id.
+        id: `question:${session.id}:${request.wait?.callId ?? first}`,
         kind: 'question',
         body: truncate(questionBody(lines.join('\n'), locale)),
       }, session)
     }
-    return next()
-  })
+  }
 
   host.on('approval/request', (request: ApprovalRequestLike, next: () => Promise<unknown>) => {
-    const session = request.agent?.session
-    if (session !== undefined) {
-      const locale = resolveLocale(store.get().locale, hostLanguageTag())
-      const detail = localizedReason(request.displayReason, locale) ?? request.reason ?? ''
-      dispatch({
-        id: `approval:${request.callId ?? request.id ?? session.id}:${Date.now()}`,
-        kind: 'approval',
-        body: truncate(approvalBody(request.toolName ?? '', detail, locale)),
-      }, session)
+    try {
+      const session = request.agent?.session
+      if (session !== undefined) {
+        const locale = resolveLocale(store.get().locale, hostLanguageTag())
+        const detail = localizedReason(request.displayReason, locale) ?? request.reason ?? ''
+        dispatch({
+          // A replacement request for the same tool carries a new call id; the
+          // same call id twice is one ask, however many listeners observe it.
+          id: `approval:${session.id}:${request.callId ?? request.id ?? request.toolName ?? 'tool'}`,
+          kind: 'approval',
+          body: truncate(approvalBody(request.toolName ?? '', detail, locale)),
+        }, session)
+      }
+    } catch (error) {
+      host.logger?.warn?.(`dsh-notify: approval notification failed: ${String(error)}`)
     }
+    // A waterfall listener that skips next() would stall the approval chain.
     return next()
   })
 
@@ -191,16 +211,17 @@ export function apply(ctx: Context): void {
         methods: ['POST'],
         requestBody: 'buffered',
         fetch: async (request) => {
-          const body = (await request.json().catch(() => null)) as Partial<Presence> | null
+          const body = (await request.json().catch(() => null)) as (Partial<Presence> & { clientId?: string }) | null
           if (body === null || typeof body.visible !== 'boolean' || typeof body.focused !== 'boolean') {
             return json({ ok: false, error: 'invalid presence' }, 400)
           }
-          presence = {
+          const clientId = typeof body.clientId === 'string' && body.clientId.length > 0 ? body.clientId : 'anonymous'
+          presenceByClient.set(clientId, {
             visible: body.visible,
             focused: body.focused,
             sessionId: typeof body.sessionId === 'string' ? body.sessionId : null,
             at: Date.now(),
-          }
+          })
           return json({ ok: true })
         },
       }),
@@ -215,7 +236,7 @@ export function apply(ctx: Context): void {
             browser: store.get().browser.enabled,
             bark: store.get().bark.enabled && store.get().bark.deviceKey.trim().length > 0,
           },
-          presence,
+          presence: effectivePresence(),
         })),
       }),
       host.connection.fetch.register({
@@ -247,6 +268,31 @@ export function apply(ctx: Context): void {
       for (const dispose of disposers) void dispose()
     }
   }, 'dsh-notify: routes')
+
+  /**
+   * The presence that speaks for the person.
+   *
+   * Several tabs report at once; an attentive tab outranks a background one, and
+   * among equals the most recent report wins.
+   */
+  function effectivePresence(): Presence | null {
+    const now = Date.now()
+    let best: Presence | null = null
+    for (const [clientId, presence] of presenceByClient) {
+      if (now - presence.at > PRESENCE_RETENTION_MS) {
+        presenceByClient.delete(clientId)
+        continue
+      }
+      if (best === null) {
+        best = presence
+        continue
+      }
+      const rank = (p: Presence): number => (p.visible && p.focused ? 2 : p.visible ? 1 : 0)
+      const better = rank(presence) > rank(best) || (rank(presence) === rank(best) && presence.at > best.at)
+      if (better) best = presence
+    }
+    return best
+  }
 
   /** Classify-time dispatch: reads the session's title and subagent fact. */
   function dispatch(partial: Pick<NotificationEvent, 'id' | 'kind' | 'body' | 'turn'>, session: SessionLike): void {
@@ -286,6 +332,7 @@ function localizedReason(display: Readonly<Record<string, string>> | undefined, 
 /** The question payload the plugin reads. */
 interface QuestionRequestLike {
   readonly agent?: { readonly session?: SessionLike }
+  readonly wait?: { readonly callId?: string }
   readonly questions?: readonly {
     readonly header?: string
     readonly question: string
@@ -313,8 +360,9 @@ const FALLBACK_TITLE = 'DeepSeek Harness'
 
 /** Read the folded session title, falling back to a stable label. */
 function readTitle(host: DshHost, session: SessionLike): string {
+  const service = optionalService<{ get(session: unknown): { title?: string | null } | undefined }>(host, 'sessionTitle')
   try {
-    const title = host.sessionTitle?.get(session)?.title?.trim()
+    const title = service?.get(session)?.title?.trim()
     if (title !== undefined && title.length > 0) return title
   } catch {
     // A missing title service must not break notifications.
@@ -390,6 +438,18 @@ function configPath(host: DshHost): string {
   return join(profileDir(host), 'dsh-notify.json')
 }
 
+/** Presence entries older than this are dropped instead of answering for a closed tab. */
+const PRESENCE_RETENTION_MS = 5 * 60_000
+
+/** Read one optional service without tripping Cordis's inject guard. */
+function optionalService<T>(host: DshHost, name: string): T | undefined {
+  try {
+    return host.get(name) as T | undefined
+  } catch {
+    return undefined
+  }
+}
+
 /** The predecessor plugin's document, read once on first run. */
 function legacyConfigPath(host: DshHost): string {
   return join(profileDir(host), 'push-notify-config.json')
@@ -397,5 +457,6 @@ function legacyConfigPath(host: DshHost): string {
 
 /** The profile directory: explicit env, then the Host service, then the default. */
 function profileDir(host: DshHost): string {
-  return process.env.DSH_PROFILE_DIR ?? host.profileContext?.dir ?? join(homedir(), '.dsh', 'profiles', 'web')
+  const service = optionalService<{ dir?: string }>(host, 'profileContext')?.dir
+  return process.env.DSH_PROFILE_DIR ?? service ?? join(homedir(), '.dsh', 'profiles', 'web')
 }
