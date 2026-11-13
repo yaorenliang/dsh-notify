@@ -29,7 +29,9 @@ device key is created at runtime inside the profile directory.
 
 - Tag the release (`git tag v0.1.0 && git push --tags`) and paste the CHANGELOG
   section into the release notes.
-- Users install with `dsh plugin --profile web add dsh-notify` and restart DSH.
+- Users install with `dsh plugin --profile web add dsh-notify`. The profile hot-applies
+  the new bundle: the plugin's routes answer and its settings page appears after a
+  page reload (a full restart also works, and is what `dsh plugin` recommends).
 - The predecessor plugins are not dependencies and are never touched by this
   package; the first run imports a copy of their configuration and leaves the
   original in place.

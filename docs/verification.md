@@ -23,7 +23,7 @@ The suite covers four layers:
 | `test/client-model.test.ts` | the settings page's store against a fake Host: load, patch write, busy transitions, and a refused push surfacing its reason instead of reading as success. |
 | `test/plugin.test.ts` | the real `apply()` against a fake Host that enforces Cordis's inject guard: the five routes, a redacted configuration round trip, a completed turn travelling over SSE after its settle window, a completion cancelled by the next turn, an unknown ending staying silent, an approval waterfall that always continues, presence across two tabs. |
 
-## After a restart, without a browser
+## Against a running Host, without a browser
 
 ```sh
 node scripts/accept.mjs          # state + redacted config, no notifications
