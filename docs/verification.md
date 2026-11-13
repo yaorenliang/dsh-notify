@@ -23,6 +23,18 @@ The suite covers four layers:
 | `test/client-model.test.ts` | the settings page's store against a fake Host: load, patch write, busy transitions, and a refused push surfacing its reason instead of reading as success. |
 | `test/plugin.test.ts` | the real `apply()` against a fake Host that enforces Cordis's inject guard: the five routes, a redacted configuration round trip, a completed turn travelling over SSE after its settle window, a completion cancelled by the next turn, an unknown ending staying silent, an approval waterfall that always continues, presence across two tabs. |
 
+## After a restart, without a browser
+
+```sh
+node scripts/accept.mjs          # state + redacted config, no notifications
+node scripts/accept.mjs --test   # also fires one browser card and one push
+```
+
+The script takes the launch token the Host has just logged, exchanges it for a
+session cookie, and asks the plugin's own routes. Exit code 0 means the Host
+loaded the plugin, the routes answer behind Connection's fence, and (with
+`--test`) both channels accepted a message.
+
 ## Manual, on the installed Host
 
 1. **Host loaded** — the settings panel shows **Notifications** in the sidebar.

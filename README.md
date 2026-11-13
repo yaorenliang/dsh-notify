@@ -73,6 +73,7 @@ pnpm install
 pnpm test        # unit tests for the event model, policy, config, and channels
 pnpm typecheck
 pnpm build       # Host ESM entry + browser lazy-CJS bundle
+node scripts/accept.mjs --test   # after a restart: check the live Host end to end
 ```
 
 Layout: `src/core` is pure logic (no Host, no DOM, runs under vitest), `src/host` owns classification and delivery, `src/client` owns presentation.
