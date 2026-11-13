@@ -88,13 +88,14 @@ export function createSettingsModel(): SettingsModel {
       set({ busy: true, error: null, notice: null })
       try {
         const result = await testChannel(channel)
-        const detail = channel === 'bark' && result.result !== undefined && !result.result.ok
-          ? result.result.reason ?? 'push failed'
-          : null
+        // The request can succeed while the channel refuses: the Host reports
+        // "transport ok, push failed" and that must not read as a success.
+        const refused = result.result !== undefined && !result.result.ok
+        const accepted = result.ok && !refused
         set({
           busy: false,
-          notice: result.ok ? `Test sent on ${channel}` : null,
-          error: result.ok ? null : detail ?? `No ${channel} channel is ready`,
+          notice: accepted ? `Test sent on ${channel}` : null,
+          error: accepted ? null : result.result?.reason ?? `No ${channel} channel is ready`,
         })
       } catch (error) {
         fail(error)
