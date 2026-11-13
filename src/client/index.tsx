@@ -101,14 +101,40 @@ export function apply(ctx: Context): void {
  * Several tabs share one Host stream; the first to see an event records it in
  * `localStorage`, and the rest stay quiet so one happening produces one card.
  */
+const SHOWN_PREFIX = 'dsh-notify:shown:'
+const SHOWN_TTL_MS = 24 * 60 * 60_000
+let shownSinceSweep = 0
+
 function alreadyShown(id: string): boolean {
-  const key = `dsh-notify:shown:${id}`
   try {
+    const key = `${SHOWN_PREFIX}${id}`
     if (localStorage.getItem(key) !== null) return true
     localStorage.setItem(key, String(Date.now()))
+    shownSinceSweep += 1
+    if (shownSinceSweep >= 50) {
+      shownSinceSweep = 0
+      forgetOldShows()
+    }
     return false
   } catch {
     return false
+  }
+}
+
+/** Drop arbitration records a day old, so the marker never grows without end. */
+function forgetOldShows(): void {
+  try {
+    const cutoff = Date.now() - SHOWN_TTL_MS
+    const stale: string[] = []
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index)
+      if (key === null || !key.startsWith(SHOWN_PREFIX)) continue
+      const at = Number(localStorage.getItem(key))
+      if (!Number.isFinite(at) || at < cutoff) stale.push(key)
+    }
+    for (const key of stale) localStorage.removeItem(key)
+  } catch {
+    // Storage may be unavailable; arbitration is best effort.
   }
 }
 
