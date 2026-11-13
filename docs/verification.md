@@ -35,6 +35,19 @@ session cookie, and asks the plugin's own routes. Exit code 0 means the Host
 loaded the plugin, the routes answer behind Connection's fence, and (with
 `--test`) both channels accepted a message.
 
+## Live Host evidence (2026-11-13)
+
+Against the running web profile on port 3080, with the owner's browser session:
+
+```json
+{"ok":true,"browsers":3,"channels":{"browser":true,"bark":true},
+ "presence":{"visible":false,"focused":false,"sessionId":null,"at":1794581572181}}
+```
+
+`browsers: 3` counts the attached tabs, and this response shape is produced only by
+this plugin. Installing the package hot-applies the profile bundle, so the routes
+and the settings page appear after a page reload, without a restart.
+
 ## Manual, on the installed Host
 
 1. **Host loaded** — the settings panel shows **Notifications** in the sidebar.
