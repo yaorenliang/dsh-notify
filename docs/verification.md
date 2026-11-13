@@ -9,7 +9,7 @@ part once per machine.
 ```sh
 pnpm install
 pnpm typecheck     # tsc --noEmit, exit 0
-pnpm test          # vitest, 69 tests
+pnpm test          # vitest, 68 tests
 pnpm build         # lib/index.js + lib/client.js + lib/types
 ```
 
@@ -34,8 +34,9 @@ The suite covers four layers:
 5. **Subagent silence** — start a task that delegates; only the main session's
    completion arrives.
 6. **No duplicates** — a permission request produces exactly one approval card.
-7. **Secrets stay home** — `grep -r "${DEVICE_KEY}" ~/.dsh/profiles/web/node_modules/dsh-notify/lib`
-   finds nothing, and the settings field shows dots plus the last four characters.
+7. **Secrets stay home** — a search for the device key across the plugin's
+   installed `lib/` finds nothing, and the settings field shows dots plus the last
+   four characters.
 8. **Authenticated transport** — `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3080/api/dsh-notify/state`
    answers `401` without a browser session.
 

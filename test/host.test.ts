@@ -75,7 +75,7 @@ describe('pushBark', () => {
 
   it('reports an http failure with its status and body', async () => {
     const fetcher: Fetcher = async () => ({ ok: false, status: 400, text: async () => 'bad key' })
-    await expect(pushBark(cfg, event, 'Done', fetcher)).resolves.toEqual({ ok: false, reason: 'Bark HTTP 400: bad key' })
+    await expect(pushBark(cfg, event, 'Done', fetcher)).resolves.toEqual({ ok: false, reason: 'Bark answered HTTP 400' })
   })
 
   it('reports a transport failure instead of throwing', async () => {

@@ -33,7 +33,7 @@ dsh plugin --profile web add ./dsh-notify
 
 ## 配置
 
-宿主持有唯一一份 JSON：`$DSH_PROFILE_DIR/dsh-notify.json`（默认 `~/.dsh/profiles/web/dsh-notify.json`）。浏览器只会拿到脱敏投影：密钥显示为"已配置 + 后四位"，留空表示保留原值，只有显式 `null` 才会清除。
+宿主持有唯一一份 JSON，位于当前 profile 目录（默认 `~/.dsh/profiles/web/dsh-notify.json`，设置了 `$DSH_PROFILE_DIR` 时以其为准）。浏览器只会拿到脱敏投影：密钥显示为"已配置 + 后四位"，留空表示保留原值，只有显式 `null` 才会清除。
 
 | 键 | 含义 |
 |---|---|
@@ -57,9 +57,9 @@ dsh plugin --profile web add ./dsh-notify
   questions）    只算一次）      逐类开关）
 ```
 
-- 宿主监听 `session/event` 取 `turn/end` 与 `approval/asked`，监听 `user-questions/request` 取提问；只有记录的原因确实是完成时，回合才算 `completed`。
+- 宿主监听 `session/event` 取 `turn/end`，监听 `approval/request` waterfall 取授权请求，监听 `user-questions/request` 取提问；只有记录的原因确实是完成时，回合才算 `completed`。
 - 在线状态由浏览器上报（可见、聚焦），会过期；过期视为"没人在看"，照常送达。
-- 传输是一条 SSE 流加三条 JSON 路由，全部注册在 `/api/dsh-notify/*`，由 Connection 鉴权。
+- 传输是一条 SSE 流加四条 JSON 路由，全部注册在 `/api/dsh-notify/*`，由 Connection 鉴权。
 
 ## 环境要求
 

@@ -7,7 +7,7 @@ const at = 1_700_000_000_000
 const event: NotificationEvent = { id: 'turn-1', kind: 'completed', sessionId: 's1', sessionTitle: 'Build', body: 'Done', at }
 
 function setup(configPatch: Record<string, unknown> = { bark: { enabled: true, deviceKey: 'k' }, browser: { enabled: true } }) {
-  const browser = vi.fn()
+  const browser = vi.fn((_event: NotificationEvent, _title: string) => true)
   const bark = vi.fn(async () => ({ ok: true as const }))
   const config = mergeConfig(DEFAULT_CONFIG, configPatch)
   const dispatcher = new Dispatcher({ config: () => config, presence: () => null, browser, bark, now: () => at })

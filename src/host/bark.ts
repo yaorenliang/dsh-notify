@@ -67,8 +67,9 @@ export async function pushBark(
       signal: AbortSignal.timeout(timeoutMs),
     })
     if (!response.ok) {
-      const text = await response.text().catch(() => '')
-      return { ok: false, reason: `Bark HTTP ${response.status}${text.length > 0 ? `: ${text.slice(0, 200)}` : ''}` }
+      // The response body is deliberately not quoted: a misconfigured server can
+      // echo the request (and the device key) back into the log.
+      return { ok: false, reason: `Bark answered HTTP ${response.status}` }
     }
     return { ok: true }
   } catch (error) {
@@ -81,6 +82,7 @@ export function deepLink(baseUrl: string, sessionId: string): string | null {
   const root = baseUrl.trim()
   if (root.length === 0) return null
   const url = new URL(root)
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
   url.searchParams.set('session', sessionId)
   return url.toString()
 }

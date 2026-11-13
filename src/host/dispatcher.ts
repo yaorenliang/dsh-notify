@@ -7,7 +7,7 @@
  */
 import type { NotificationEvent } from '../core/events.ts'
 import type { NotifyConfig } from '../core/config.ts'
-import { collapseKey, decideDelivery, type DeliveryPolicy, type PolicyFacts, type Presence } from '../core/policy.ts'
+import { DEFAULT_POLICY, collapseKey, decideDelivery, type DeliveryPolicy, type PolicyFacts, type Presence } from '../core/policy.ts'
 import { composeTitle } from './title.ts'
 import type { BarkResult } from './bark.ts'
 
@@ -25,8 +25,8 @@ export interface DispatchPorts {
   readonly config: () => NotifyConfig
   /** The latest browser presence report, or null when nobody reported. */
   readonly presence: () => Presence | null
-  /** Show one system notification in every attached browser. */
-  readonly browser: (event: NotificationEvent, title: string) => void
+  /** Show one system notification in every attached browser; false when none is attached. */
+  readonly browser: (event: NotificationEvent, title: string) => boolean
   /** Push one event to the phone. */
   readonly bark: (event: NotificationEvent, title: string) => Promise<BarkResult>
   /** Host log sink. */
@@ -36,7 +36,7 @@ export interface DispatchPorts {
 }
 
 /** How long a collapsed event id is remembered, in milliseconds. */
-const DEDUPE_TTL_MS = 30_000
+const DEDUPE_TTL_MS = 10 * 60_000
 
 /** Burst guards: a runaway loop must not turn into a notification storm. */
 const RATE = { sessionPerMinute: 6, globalPerMinute: 20 } as const
@@ -63,14 +63,17 @@ export class Dispatcher {
     this.prune(now)
 
     const key = collapseKey(event)
-    if (this.seen.has(key)) return { delivered: false, suppressed: 'duplicate', channels: [] }
+    const firstSeen = this.seen.get(key)
+    if (firstSeen !== undefined && now - firstSeen <= DEDUPE_TTL_MS) {
+      return { delivered: false, suppressed: 'duplicate', channels: [] }
+    }
     this.seen.set(key, now)
 
     const config = this.ports.config()
     const policy: DeliveryPolicy = {
+      ...DEFAULT_POLICY,
       currentSessionMode: config.browser.currentSessionMode,
       notifySubagents: config.notifySubagents,
-      presenceTtlMs: 45_000,
     }
     const decision = decideDelivery(event, facts, this.ports.presence(), policy, now)
     if (!decision.deliver) {
@@ -83,8 +86,7 @@ export class Dispatcher {
 
     const title = composeTitle(config.prefix, event.kind, event.sessionTitle)
     const channels: ('browser' | 'bark')[] = []
-    if (config.browser.enabled) {
-      this.ports.browser(event, title)
+    if (config.browser.enabled && this.ports.browser(event, title)) {
       channels.push('browser')
     }
     if (config.bark.enabled && config.bark.deviceKey.trim().length > 0) {
@@ -118,7 +120,7 @@ export class Dispatcher {
 
   /** Forget ids older than the collapse window. */
   private prune(now: number): void {
-    if (this.seen.size < 256) return
+    if (this.seen.size < 64) return
     for (const [key, at] of this.seen) {
       if (now - at > DEDUPE_TTL_MS) this.seen.delete(key)
     }

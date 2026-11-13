@@ -65,13 +65,17 @@ export function apply(ctx: Context): void {
 
   const hub = new SseHub()
   const memories = new Map<string, SessionMemory>()
-  const settling = new Map<string, ReturnType<typeof setTimeout>>()
+  const settling = new Map<string, { timer: ReturnType<typeof setTimeout>; id: string }>()
   const presenceByClient = new Map<string, Presence>()
 
   const dispatcher = new Dispatcher({
     config: () => store.get(),
     presence: () => effectivePresence(),
-    browser: (event, title) => hub.broadcast({ event: 'notification', data: JSON.stringify({ ...event, title }) }),
+    browser: (event, title) => {
+      if (hub.size === 0) return false
+      hub.broadcast({ event: 'notification', data: JSON.stringify({ ...event, title }) })
+      return true
+    },
     bark: (event, title) => pushBark(store.get(), event, title),
     log: (message) => host.logger?.warn?.(message),
   })
@@ -82,8 +86,9 @@ export function apply(ctx: Context): void {
     const timer = setInterval(() => hub.heartbeat(), HEARTBEAT_MS)
     return () => {
       clearInterval(timer)
-      for (const pending of settling.values()) clearTimeout(pending)
+      for (const pending of settling.values()) clearTimeout(pending.timer)
       settling.clear()
+      hub.closeAll()
     }
   }, 'dsh-notify: heartbeat')
 
@@ -93,9 +98,10 @@ export function apply(ctx: Context): void {
       // A continuation supersedes the completion that was waiting to be announced.
       const pending = settling.get(session.id)
       if (pending !== undefined) {
-        clearTimeout(pending)
+        clearTimeout(pending.timer)
         settling.delete(session.id)
       }
+      memory.text = ''
       return
     }
     if (event.type === 'assistant/message') {
@@ -125,10 +131,12 @@ export function apply(ctx: Context): void {
 
     if (kind === 'completed') {
       const timer = setTimeout(() => {
+        // Only the newest scheduled completion for this session may fire.
+        if (settling.get(session.id)?.id !== partial.id) return
         settling.delete(session.id)
         dispatch(partial, session)
       }, SETTLE_MS)
-      settling.set(session.id, timer)
+      settling.set(session.id, { timer, id: partial.id })
       return
     }
     dispatch(partial, session)
@@ -308,7 +316,8 @@ export function apply(ctx: Context): void {
       at: Date.now(),
       ...(partial.turn !== undefined ? { turn: partial.turn } : {}),
     }
-    dispatcher.dispatch(event, { subagent: isSubagent(session) })
+    const outcome = dispatcher.dispatch(event, { subagent: isSubagent(session) })
+    if (outcome.suppressed === 'rate-limit') host.logger?.warn?.(`dsh-notify: burst limit reached for ${session.id}`)
   }
 }
 
@@ -349,7 +358,10 @@ function memoryOf(memories: Map<string, SessionMemory>, host: DshHost, session: 
     if (existing.title === FALLBACK_TITLE) existing.title = readTitle(host, session)
     return existing
   }
-  if (memories.size > 500) memories.clear()
+  if (memories.size > 500) {
+    const oldest = memories.keys().next()
+    if (!oldest.done) memories.delete(oldest.value)
+  }
   const memory: SessionMemory = { text: '', title: readTitle(host, session) }
   memories.set(session.id, memory)
   return memory
@@ -384,11 +396,6 @@ function assistantText(data: unknown): string {
     .map((block) => block.text ?? '')
     .join('\n')
     .trim()
-}
-
-/** Describe a failure in one line. */
-function describeFailure(code: string | null, message: string): string {
-  return code !== null && !message.includes(code) ? `${message} (${code})` : message
 }
 
 /** Answer one SSE stream request. */

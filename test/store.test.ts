@@ -35,30 +35,17 @@ describe('ConfigStore', () => {
     expect(store.get().bark.deviceKey).toBe('k')
   })
 
-  it('persists a patch and notifies listeners once', () => {
+  it('persists a patch', () => {
     const { store, text } = memoryStore(null)
     store.load()
-    const listener = vi.fn()
-    store.onChange(listener)
     store.update({ prefix: 'ray' })
     expect(store.get().prefix).toBe('ray')
     expect(JSON.parse(text() ?? '{}').prefix).toBe('ray')
-    expect(listener).toHaveBeenCalledTimes(1)
   })
 
   it('does not lose a stored secret when the browser echoes the mask', () => {
     const { store } = memoryStore(JSON.stringify({ bark: { enabled: true, deviceKey: 'stored-key-1234' } }))
     store.load()
     expect(store.update({ bark: { deviceKey: '••••••••1234' } }).bark.deviceKey).toBe('stored-key-1234')
-  })
-
-  it('stops notifying after unsubscribe', () => {
-    const { store } = memoryStore(null)
-    store.load()
-    const listener = vi.fn()
-    const off = store.onChange(listener)
-    off()
-    store.update({ prefix: 'x' })
-    expect(listener).not.toHaveBeenCalled()
   })
 })

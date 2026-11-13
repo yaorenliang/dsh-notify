@@ -65,6 +65,11 @@ export class SseHub {
     }
   }
 
+  /** Detach every subscriber, e.g. when the plugin unloads. */
+  closeAll(): void {
+    this.sinks.clear()
+  }
+
   /** How many browsers are currently attached. */
   get size(): number {
     return this.sinks.size

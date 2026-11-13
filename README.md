@@ -33,7 +33,7 @@ dsh plugin --profile web add ./dsh-notify
 
 ## Configuration
 
-The Host owns one JSON document at `$DSH_PROFILE_DIR/dsh-notify.json` (default `~/.dsh/profiles/web/dsh-notify.json`). The browser only ever receives a redacted projection: a secret shows as `configured` plus its last four characters, an empty field keeps the stored value, and only an explicit `null` erases one.
+The Host owns one JSON document in the active profile directory (`~/.dsh/profiles/web/dsh-notify.json` by default, or `$DSH_PROFILE_DIR` when set). The browser only ever receives a redacted projection: a secret shows as `configured` plus its last four characters, an empty field keeps the stored value, and only an explicit `null` erases one.
 
 | Key | Meaning |
 |---|---|
@@ -57,9 +57,9 @@ Host events ──► classifier ──► delivery policy ──► ┬─► B
   questions)      happening)      per-kind switch)
 ```
 
-- The Host listens to `session/event` for `turn/end` and `approval/asked`, and to `user-questions/request` for questions. A turn is `completed` only when its recorded reason says so.
+- The Host listens to `session/event` for `turn/end`, to the `approval/request` waterfall for permissions, and to `user-questions/request` for questions. A turn is `completed` only when its recorded reason says so.
 - Presence is reported by the browser (`visible`, `focused`) and expires; an expired report means "nobody is looking" and the notification goes out.
-- Transport is one SSE stream and three JSON routes under `/api/dsh-notify/*`, registered through `ctx.connection.fetch` so Connection authenticates every request.
+- Transport is one SSE stream plus four JSON routes under `/api/dsh-notify/*`, registered through `ctx.connection.fetch` so Connection authenticates every request.
 
 ## Requirements
 

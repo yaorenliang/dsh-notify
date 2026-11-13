@@ -28,7 +28,6 @@ export interface ConfigStoreOptions {
 /** The live configuration document with change notification. */
 export class ConfigStore {
   private config: NotifyConfig = DEFAULT_CONFIG
-  private readonly listeners = new Set<(config: NotifyConfig) => void>()
   private readonly file: string
   private readonly readText: (path: string) => string
   private readonly writeText: (path: string, text: string) => void
@@ -93,14 +92,7 @@ export class ConfigStore {
     } catch (error) {
       this.warn(`dsh-notify: could not write ${this.file}: ${String(error)}`)
     }
-    for (const listener of this.listeners) listener(next)
     return next
-  }
-
-  /** Observe configuration changes; the returned function unsubscribes. */
-  onChange(listener: (config: NotifyConfig) => void): () => void {
-    this.listeners.add(listener)
-    return () => this.listeners.delete(listener)
   }
 }
 

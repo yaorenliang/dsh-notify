@@ -157,12 +157,6 @@ export function resolveConfig(raw: unknown): NotifyConfig {
   return mergeConfig(DEFAULT_CONFIG, raw)
 }
 
-/** Whether a kind is enabled for at least one channel. */
-export function kindEnabled(config: NotifyConfig, kind: NotificationKind): boolean {
-  if (!config.events[kind].enabled) return false
-  return config.browser.enabled || (config.bark.enabled && config.bark.deviceKey.trim().length > 0)
-}
-
 function resolveSecret(next: unknown, stored: string): string {
   if (next === null) return ''
   if (isMaskEcho(next)) return stored

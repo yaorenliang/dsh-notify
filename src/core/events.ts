@@ -39,18 +39,6 @@ export interface NotificationEvent {
   readonly turn?: number
 }
 
-/** The durable session facts one classification reads. */
-export interface SessionFacts {
-  readonly id: string
-  readonly title: string
-  /** True when this session was spawned by another session. */
-  readonly subagent: boolean
-  /** Running descendant count, when the Host can see the fan-out. */
-  readonly runningDescendants: number
-  /** True when the Host already holds work that will start another turn. */
-  readonly hasQueuedWork: boolean
-}
-
 /** The reason shape `turn/end` carries, narrowed to the fields read here. */
 export interface TurnEndReasonLike {
   readonly kind?: string
@@ -65,8 +53,6 @@ export type TurnOutcome =
   | { readonly kind: 'interrupted'; readonly reason: TurnEndReasonLike }
   /** The turn ended in a way that is not worth interrupting anyone for. */
   | { readonly kind: 'silent'; readonly why: 'blocked' | 'max-tokens' | 'forked' | 'unknown' }
-
-const QUOTA_CODES = new Set(['QUOTA', 'ACCOUNT_QUOTA', 'INSUFFICIENT_QUOTA'])
 
 /**
  * Classify a finished turn.
