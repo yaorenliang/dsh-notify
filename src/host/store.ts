@@ -19,10 +19,6 @@ export interface ConfigStoreOptions {
   readonly writeText?: (path: string, text: string) => void
   /** Host logger, used when the document cannot be parsed. */
   readonly warn?: (message: string) => void
-  /** A predecessor's document to import when this one does not exist yet. */
-  readonly legacyFile?: string
-  /** Translator from a predecessor document into this plugin's configuration. */
-  readonly migrate?: (raw: unknown) => NotifyConfig
 }
 
 /** The live configuration document with change notification. */
@@ -32,16 +28,12 @@ export class ConfigStore {
   private readonly readText: (path: string) => string
   private readonly writeText: (path: string, text: string) => void
   private readonly warn: (message: string) => void
-  private readonly legacyFile: string | undefined
-  private readonly migrate: ((raw: unknown) => NotifyConfig) | undefined
 
   constructor(options: ConfigStoreOptions) {
     this.file = options.file
     this.readText = options.readText ?? ((path) => readFileSync(path, 'utf8'))
     this.writeText = options.writeText ?? atomicWrite
     this.warn = options.warn ?? (() => {})
-    this.legacyFile = options.legacyFile
-    this.migrate = options.migrate
   }
 
   /** Read the document once; a missing file keeps the defaults. */
@@ -51,31 +43,9 @@ export class ConfigStore {
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
       if (code !== 'ENOENT') this.warn(`dsh-notify: could not read ${this.file}: ${String(error)}`)
-      this.config = this.importLegacy()
+      this.config = DEFAULT_CONFIG
     }
     return this.config
-  }
-
-  /**
-   * Import a predecessor's document on first run.
-   *
-   * The imported values are persisted under this plugin's own file so later
-   * edits have one source of truth; the predecessor's file is left in place so
-   * rolling back stays possible.
-   */
-  private importLegacy(): NotifyConfig {
-    if (this.legacyFile === undefined || this.migrate === undefined) return DEFAULT_CONFIG
-    try {
-      const imported = this.migrate(JSON.parse(this.readText(this.legacyFile)))
-      try {
-        this.writeText(this.file, `${JSON.stringify(imported, null, 2)}\n`)
-      } catch (error) {
-        this.warn(`dsh-notify: could not persist the imported configuration: ${String(error)}`)
-      }
-      return imported
-    } catch {
-      return DEFAULT_CONFIG
-    }
   }
 
   /** The current configuration. */

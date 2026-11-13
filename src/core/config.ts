@@ -30,8 +30,14 @@ export interface BarkConfig {
   readonly deviceKey: string
   /** Notification group shown by the Bark app. */
   readonly group: string
-  /** Optional icon URL. */
-  readonly icon: string
+  /**
+   * Root of the UI a push should open, e.g. `http://127.0.0.1:3080`.
+   *
+   * Empty omits the link: the Host cannot guess which address reaches it from
+   * the phone, so an unset value must stay unset instead of pointing at a
+   * loopback address that means nothing on a device.
+   */
+  readonly baseUrl: string
 }
 
 /** Browser delivery settings. */
@@ -47,10 +53,6 @@ export interface BrowserConfig {
 export interface NotifyConfig {
   /** Interface language for the plugin's own copy. */
   readonly locale: LocaleSetting
-  /** Title prefix such as `[DSH] `; empty disables it. */
-  readonly prefix: string
-  /** Deep-link root used by a push click; empty omits the link. */
-  readonly baseUrl: string
   /** Whether sessions spawned by another session may alert. */
   readonly notifySubagents: boolean
   readonly events: Readonly<Record<NotificationKind, KindConfig>>
@@ -64,8 +66,6 @@ export const NOTIFICATION_KINDS: readonly NotificationKind[] = ['completed', 'fa
 /** Defaults applied when the stored document says nothing. */
 export const DEFAULT_CONFIG: NotifyConfig = Object.freeze({
   locale: 'auto',
-  prefix: '',
-  baseUrl: '',
   notifySubagents: false,
   events: Object.freeze({
     completed: Object.freeze({ enabled: true, sound: 'chime', barkSound: 'system' }),
@@ -75,7 +75,13 @@ export const DEFAULT_CONFIG: NotifyConfig = Object.freeze({
     question: Object.freeze({ enabled: true, sound: 'pop', barkSound: 'system' }),
   }),
   browser: Object.freeze({ enabled: false, volume: 0.6, currentSessionMode: 'hidden' }),
-  bark: Object.freeze({ enabled: false, serverUrl: 'https://api.day.app', deviceKey: '', group: 'DeepSeek Harness', icon: '' }),
+  bark: Object.freeze({
+    enabled: false,
+    serverUrl: 'https://api.day.app',
+    deviceKey: '',
+    group: 'DSH',
+    baseUrl: '',
+  }),
 })
 
 const SOUNDS: readonly SoundId[] = ['chime', 'fault', 'pop', 'alert']
@@ -133,8 +139,6 @@ export function mergeConfig(current: NotifyConfig, patch: unknown): NotifyConfig
   const bark = isPlainObject(patch.bark) ? patch.bark : {}
   return {
     locale: isLocale(patch.locale) ? patch.locale : current.locale,
-    prefix: typeof patch.prefix === 'string' ? patch.prefix.slice(0, 12) : current.prefix,
-    baseUrl: typeof patch.baseUrl === 'string' ? patch.baseUrl.trim() : current.baseUrl,
     notifySubagents: typeof patch.notifySubagents === 'boolean' ? patch.notifySubagents : current.notifySubagents,
     events,
     browser: {
@@ -147,7 +151,7 @@ export function mergeConfig(current: NotifyConfig, patch: unknown): NotifyConfig
       serverUrl: typeof bark.serverUrl === 'string' && bark.serverUrl.trim().length > 0 ? bark.serverUrl.trim().replace(/\/+$/, '') : current.bark.serverUrl,
       deviceKey: resolveSecret(bark.deviceKey, current.bark.deviceKey),
       group: typeof bark.group === 'string' && bark.group.trim().length > 0 ? bark.group.trim() : current.bark.group,
-      icon: typeof bark.icon === 'string' ? bark.icon.trim() : current.bark.icon,
+      baseUrl: typeof bark.baseUrl === 'string' ? bark.baseUrl.trim() : current.bark.baseUrl,
     },
   }
 }

@@ -47,6 +47,12 @@ function fakeHost(dir: string): FakeHost {
   }
 }
 
+/** The JSON payload of one SSE frame. */
+function framePayload(frame: string): string {
+  const line = frame.split('\n').find((entry) => entry.startsWith('data: '))
+  return line === undefined ? '{}' : line.slice('data: '.length)
+}
+
 /** A session stub with the fields the plugin reads. */
 function session(id = 'session-1', subagent = false) {
   return { id, header: subagent ? { origin: 'subagent', delegationDepth: 1 } : { delegationDepth: 0 } }
@@ -156,6 +162,55 @@ describe('plugin wiring', () => {
     const raced = await Promise.race([frames.next(), new Promise<string>((resolve) => setTimeout(() => resolve('timeout'), 100))])
     frames.close()
     expect(raced).toBe('timeout')
+  })
+
+  it('leads the body with what the person asked', async () => {
+    const stream = host.routes.get('/api/dsh-notify/stream')!
+    const response = await stream.fetch(new Request('http://x/api/dsh-notify/stream'))
+    await host.routes.get('/api/dsh-notify/config')!.fetch(new Request('http://x/api/dsh-notify/config', {
+      method: 'POST',
+      body: JSON.stringify({ browser: { enabled: true, currentSessionMode: 'always' } }),
+    }))
+    const frames = frameReader(response)
+    await frames.next()
+    const onEvent = host.listeners.get('session/event')!
+    const target = session('s-prompt')
+    onEvent(target, { type: 'turn/start', data: { turn: 1 } })
+    onEvent(target, {
+      type: 'user/message',
+      data: { role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: 'Fix the build' }] },
+    })
+    onEvent(target, { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: 'All green.' }] } } })
+    onEvent(target, { type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } })
+
+    const event = JSON.parse(framePayload(await frames.next()))
+    frames.close()
+    expect(event.body).toBe('Fix the build')
+    expect(event.title).toBe('✅ Fix the build')
+  })
+
+  it('treats injected context as no prompt at all', async () => {
+    const stream = host.routes.get('/api/dsh-notify/stream')!
+    const response = await stream.fetch(new Request('http://x/api/dsh-notify/stream'))
+    await host.routes.get('/api/dsh-notify/config')!.fetch(new Request('http://x/api/dsh-notify/config', {
+      method: 'POST',
+      body: JSON.stringify({ browser: { enabled: true, currentSessionMode: 'always' } }),
+    }))
+    const frames = frameReader(response)
+    await frames.next()
+    const onEvent = host.listeners.get('session/event')!
+    const target = session('s-injected')
+    onEvent(target, { type: 'turn/start', data: { turn: 1 } })
+    onEvent(target, {
+      type: 'user/message',
+      data: { role: 'user', source: { kind: 'cron' }, content: [{ type: 'text', text: 'Daily maintenance' }] },
+    })
+    onEvent(target, { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: 'All clean.' }] } } })
+    onEvent(target, { type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } })
+
+    const event = JSON.parse(framePayload(await frames.next()))
+    frames.close()
+    expect(event.body).toBe('All clean.')
   })
 
   it('cancels a completion that is followed by another turn', async () => {

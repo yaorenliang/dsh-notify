@@ -84,7 +84,7 @@ export class Dispatcher {
       return { delivered: false, suppressed: 'rate-limit', channels: [] }
     }
 
-    const title = composeTitle(config.prefix, event.kind, event.sessionTitle)
+    const title = composeTitle(event.kind, event.sessionTitle)
     const channels: ('browser' | 'bark')[] = []
     if (config.browser.enabled && this.ports.browser(event, title)) {
       channels.push('browser')

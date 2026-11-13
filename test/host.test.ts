@@ -16,29 +16,26 @@ function configure(patch: Record<string, unknown>) {
 describe('barkPayload', () => {
   it('carries the device key, group, and body', () => {
     const cfg = configure({ bark: { enabled: true, deviceKey: 'key-123', group: 'DSH' } })
-    expect(barkPayload(cfg, event, '[DSH] Done')).toEqual({
-      device_key: 'key-123', title: '[DSH] Done', body: 'Done', group: 'DSH',
+    expect(barkPayload(cfg, event, 'Done')).toEqual({
+      device_key: 'key-123', title: 'Done', body: 'Done', group: 'DSH',
     })
   })
 
-  it('omits the default sound, an empty icon, and an unset link', () => {
+  it('omits the default sound and an unset link', () => {
     const cfg = configure({ bark: { enabled: true, deviceKey: 'key-123' } })
     const payload = barkPayload(cfg, event, 'Done')
     expect(payload).not.toHaveProperty('sound')
-    expect(payload).not.toHaveProperty('icon')
     expect(payload).not.toHaveProperty('url')
   })
 
-  it('passes a per-kind Bark sound and a deep link', () => {
+  it('passes a per-kind Bark sound and the configured link root', () => {
     const cfg = configure({
-      baseUrl: 'http://127.0.0.1:3080/',
-      bark: { enabled: true, deviceKey: 'key-123', icon: 'https://example.test/i.png' },
+      bark: { enabled: true, deviceKey: 'key-123', baseUrl: 'http://127.0.0.1:3080/' },
       events: { failed: { barkSound: 'alarm' } },
     })
     const failed = { ...event, kind: 'failed' as const }
     const payload = barkPayload(cfg, failed, 'Failed')
     expect(payload.sound).toBe('alarm')
-    expect(payload.icon).toBe('https://example.test/i.png')
     expect(payload.url).toBe('http://127.0.0.1:3080/?session=session-7')
   })
 })

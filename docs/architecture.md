@@ -40,7 +40,7 @@ No Host import, no DOM, no clock it is not given. Four modules:
 - `bark.ts` — one payload, one POST, no retry: a missed push is a missed moment,
   not a lost fact.
 - `sse.ts` — a sink set, heartbeats, and a drop-on-write-failure rule.
-- `store.ts` — atomic document writes, first-run import of the predecessor's file.
+- `store.ts` — atomic document writes and defensible reads.
 - `title.ts` — the single title format both channels use.
 
 ## `src/client` — presentation

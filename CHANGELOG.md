@@ -4,7 +4,11 @@
 
 First release: one Host event model driving a browser channel (system
 notification, per-kind sound, click-to-session, collapse by kind) and a Bark
-channel (APNs push with group, icon, per-kind sound, deep link).
+channel (APNs push with group, per-kind sound, optional link).
+
+A notification reads like the conversation: the title is a status mark plus the
+session name, and the body is the prompt the person last typed, with the outcome
+appended for failures and interruptions.
 
 ### Behaviour
 
@@ -19,8 +23,8 @@ channel (APNs push with group, icon, per-kind sound, deep link).
 
 ### Configuration
 
-- One JSON document per profile, written atomically, imported from
-  `push-notify-config.json` on first run while leaving the legacy file untouched.
+- One JSON document per profile, written atomically. Nothing is imported from a
+  predecessor plugin; this release owns its file from the first run.
 - Secrets never cross to the browser: the page sees `configured` plus the last
   four characters, an exactly-echoed mask keeps the stored value, and only an
   explicit `null` erases one.

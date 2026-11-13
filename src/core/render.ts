@@ -13,34 +13,50 @@ export type Locale = 'zh' | 'en'
 /** The stored language preference. */
 export type LocaleSetting = 'auto' | Locale
 
+/**
+ * A notification body leads with what the person asked, then what happened.
+ *
+ * On a lock screen the useful half is "the thing I asked for" — the person
+ * already knows they were waiting. The outcome rides behind it as a short clause.
+ */
+function joinPrompt(prompt: string, detail: string): string {
+  const asked = prompt.trim()
+  const outcome = detail.trim()
+  if (asked.length === 0) return outcome
+  if (outcome.length === 0) return asked
+  return `${asked} · ${outcome}`
+}
+
 /** What the Host and the browser answer for one completed turn. */
-export function completedBody(text: string, locale: Locale): string {
-  const trimmed = text.trim()
-  if (trimmed.length > 0) return trimmed
+export function completedBody(prompt: string, answerFallback: string, locale: Locale): string {
+  const asked = prompt.trim()
+  if (asked.length > 0) return asked
+  const answer = answerFallback.trim()
+  if (answer.length > 0) return answer
   return locale === 'zh' ? '本轮已完成。' : 'The turn finished.'
 }
 
 /** What they answer for a failed turn. */
-export function failedBody(code: string | null, message: string, locale: Locale): string {
+export function failedBody(prompt: string, code: string | null, message: string, locale: Locale): string {
   if (code !== null && (code === 'QUOTA' || code === 'ACCOUNT_QUOTA' || code === 'INSUFFICIENT_QUOTA')) {
-    return locale === 'zh' ? '账号额度已用尽，本轮中止。' : 'The account quota is exhausted; the turn was aborted.'
+    return joinPrompt(prompt, locale === 'zh' ? '账号额度已用尽，本轮中止。' : 'The account quota is exhausted; the turn was aborted.')
   }
   const detail = message.trim()
   if (detail.length === 0) {
-    return locale === 'zh' ? '本轮在给出答案前失败。' : 'The turn failed before it could answer.'
+    return joinPrompt(prompt, locale === 'zh' ? '本轮在给出答案前失败。' : 'The turn failed before it could answer.')
   }
-  return code !== null && !detail.includes(code) ? `${detail} (${code})` : detail
+  return joinPrompt(prompt, code !== null && !detail.includes(code) ? `${detail} (${code})` : detail)
 }
 
 /** What they answer for an aborted or interrupted turn. */
-export function interruptedBody(reason: TurnEndReasonLike, locale: Locale): string {
+export function interruptedBody(prompt: string, reason: TurnEndReasonLike, locale: Locale): string {
   if (isSignedOutAbort(reason)) {
-    return locale === 'zh' ? '账号已退出登录，本轮停止。' : 'The account signed out, so the turn stopped.'
+    return joinPrompt(prompt, locale === 'zh' ? '账号已退出登录，本轮停止。' : 'The account signed out, so the turn stopped.')
   }
   if (reason.kind === 'aborted') {
-    return locale === 'zh' ? '本轮被中止。' : 'The turn was aborted.'
+    return joinPrompt(prompt, locale === 'zh' ? '本轮被中止。' : 'The turn was aborted.')
   }
-  return locale === 'zh' ? '本轮被中断。' : 'The turn was interrupted.'
+  return joinPrompt(prompt, locale === 'zh' ? '本轮被中断。' : 'The turn was interrupted.')
 }
 
 /** What they answer for a pending permission request. */

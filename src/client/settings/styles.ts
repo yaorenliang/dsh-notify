@@ -533,7 +533,7 @@ const CSS = `
 
 .dn-sound__head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 128px 148px 64px;
+  grid-template-columns: minmax(0, 1fr) 44px 128px 148px 64px;
   gap: 8px;
   padding-bottom: 6px;
   font-size: 12px;
@@ -543,7 +543,7 @@ const CSS = `
 
 .dn-sound__row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 128px 148px 64px;
+  grid-template-columns: minmax(0, 1fr) 44px 128px 148px 64px;
   gap: 8px;
   align-items: center;
   padding: 10px 0;
@@ -610,6 +610,49 @@ const CSS = `
   .dn-sound__name {
     grid-column: 1 / -1;
   }
+}
+
+/* One channel: a header row whose switch opens its own settings. */
+.dn-channel {
+  display: flex;
+  flex-direction: column;
+}
+
+.dn-channelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+}
+
+.dn-rowAside {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.dn-channelBody {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 16px 16px 16px;
+}
+
+.dn-channelSep {
+  height: 0.5px;
+  background: var(--dsw-alias-border-l2);
+}
+
+/* The quieting rules belong to the master switch, so they sit inside it. */
+.dn-indent {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 2px;
+  padding: 14px 16px 16px 16px;
+  border-top: 0.5px solid var(--dsw-alias-border-l2);
 }
 `;
 

@@ -86,9 +86,9 @@ describe('Dispatcher', () => {
     expect(dispatcher.dispatch(event, { subagent: false }).delivered).toBe(true)
   })
 
-  it('applies the prefix to the title', () => {
-    const { dispatcher, browser } = setup({ prefix: 'dsh', browser: { enabled: true } })
+  it('titles the event with its marker and the session name', () => {
+    const { dispatcher, browser } = setup({ browser: { enabled: true } })
     dispatcher.dispatch(event, { subagent: false })
-    expect(browser.mock.calls[0]?.[1]).toBe('[dsh] ✅ Build')
+    expect(browser.mock.calls[0]?.[1]).toBe('✅ Build')
   })
 })

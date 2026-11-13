@@ -20,7 +20,6 @@ export interface BarkPayload {
   readonly title: string
   readonly body: string
   readonly group: string
-  readonly icon?: string
   readonly sound?: string
   readonly url?: string
 }
@@ -28,13 +27,12 @@ export interface BarkPayload {
 /** Build the payload for one event, omitting empty optional fields. */
 export function barkPayload(config: NotifyConfig, event: NotificationEvent, title: string): BarkPayload {
   const sound = config.events[event.kind].barkSound.trim()
-  const link = deepLink(config.baseUrl, event.sessionId)
+  const link = deepLink(config.bark.baseUrl, event.sessionId)
   return {
     device_key: config.bark.deviceKey.trim(),
     title,
     body: event.body,
-    group: config.bark.group.trim().length > 0 ? config.bark.group.trim() : 'DeepSeek Harness',
-    ...(config.bark.icon.trim().length > 0 ? { icon: config.bark.icon.trim() } : {}),
+    group: config.bark.group.trim(),
     ...(sound.length > 0 && sound !== 'system' ? { sound } : {}),
     ...(link !== null ? { url: link } : {}),
   }
@@ -45,7 +43,7 @@ export function barkPayload(config: NotifyConfig, event: NotificationEvent, titl
  *
  * @param config - the live configuration; the caller has already decided the channel is enabled.
  * @param event - the classified event.
- * @param title - the final title (prefix applied by the caller).
+ * @param title - the final title, composed by the caller.
  * @param fetcher - the transport; defaults to the global `fetch`.
  * @param timeoutMs - abort budget for one attempt.
  */

@@ -19,7 +19,7 @@ function memoryStore(initial: string | null) {
 describe('ConfigStore', () => {
   it('keeps the defaults when the file is missing', () => {
     const { store, warnings } = memoryStore(null)
-    expect(store.load().prefix).toBe('')
+    expect(store.load().bark.group).toBe('DSH')
     expect(warnings).toEqual([])
   })
 
@@ -30,17 +30,17 @@ describe('ConfigStore', () => {
   })
 
   it('reads a stored document', () => {
-    const { store } = memoryStore(JSON.stringify({ prefix: 'dsh', bark: { enabled: true, deviceKey: 'k' } }))
-    expect(store.load().prefix).toBe('dsh')
+    const { store } = memoryStore(JSON.stringify({ locale: 'zh', bark: { enabled: true, deviceKey: 'k' } }))
+    expect(store.load().locale).toBe('zh')
     expect(store.get().bark.deviceKey).toBe('k')
   })
 
   it('persists a patch', () => {
     const { store, text } = memoryStore(null)
     store.load()
-    store.update({ prefix: 'ray' })
-    expect(store.get().prefix).toBe('ray')
-    expect(JSON.parse(text() ?? '{}').prefix).toBe('ray')
+    store.update({ bark: { group: 'ray' } })
+    expect(store.get().bark.group).toBe('ray')
+    expect(JSON.parse(text() ?? '{}').bark.group).toBe('ray')
   })
 
   it('does not lose a stored secret when the browser echoes the mask', () => {

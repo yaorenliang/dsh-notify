@@ -17,7 +17,6 @@ import { Dispatcher } from './dispatcher.ts'
 import { SseHub, type SseSink } from './sse.ts'
 import { pushBark } from './bark.ts'
 import { composeTitle } from './title.ts'
-import { fromLegacy } from './migrate.ts'
 import type { DshHost, SessionEventLike, SessionLike } from './types.ts'
 
 export const name = 'dsh-notify'
@@ -46,7 +45,9 @@ const SETTLE_MS = 900
 
 /** What the notifier remembers about one session. */
 interface SessionMemory {
-  /** Latest assistant text, used as the completion body. */
+  /** Last thing the person actually typed this turn; the notification body. */
+  prompt: string
+  /** Latest assistant text, used only when a turn had no human prompt. */
   text: string
   /** Display title last read from the title service. */
   title: string
@@ -57,8 +58,6 @@ export function apply(ctx: Context): void {
   const host = ctx as unknown as DshHost
   const store = new ConfigStore({
     file: configPath(host),
-    legacyFile: legacyConfigPath(host),
-    migrate: fromLegacy,
     warn: (message) => host.logger?.warn?.(message),
   })
   store.load()
@@ -101,7 +100,13 @@ export function apply(ctx: Context): void {
         clearTimeout(pending.timer)
         settling.delete(session.id)
       }
+      memory.prompt = ''
       memory.text = ''
+      return
+    }
+    if (event.type === 'user/message') {
+      const prompt = humanPrompt(event.data)
+      if (prompt.length > 0) memory.prompt = prompt
       return
     }
     if (event.type === 'assistant/message') {
@@ -117,10 +122,10 @@ export function apply(ctx: Context): void {
 
     const locale = resolveLocale(store.get().locale, hostLanguageTag())
     const body = outcome.kind === 'completed'
-      ? truncate(completedBody(memory.text, locale))
+      ? truncate(completedBody(memory.prompt, memory.text, locale))
       : outcome.kind === 'failed'
-        ? truncate(failedBody(outcome.code, outcome.message, locale))
-        : truncate(interruptedBody(outcome.reason, locale))
+        ? truncate(failedBody(memory.prompt, outcome.code, outcome.message, locale))
+        : truncate(interruptedBody(memory.prompt, outcome.reason, locale))
     const kind: NotificationKind = outcome.kind
     const partial = {
       id: `turn:${session.id}:${data?.turn ?? 0}`,
@@ -262,7 +267,7 @@ export function apply(ctx: Context): void {
             body: 'This is a test notification from dsh-notify.',
             at: Date.now(),
           }
-          const title = composeTitle(config.prefix, 'completed', event.sessionTitle)
+          const title = composeTitle('completed', event.sessionTitle)
           if (body.channel === 'bark') {
             const result = await pushBark(config, event, title)
             return json({ ok: result.ok, channel: 'bark', result })
@@ -362,7 +367,7 @@ function memoryOf(memories: Map<string, SessionMemory>, host: DshHost, session: 
     const oldest = memories.keys().next()
     if (!oldest.done) memories.delete(oldest.value)
   }
-  const memory: SessionMemory = { text: '', title: readTitle(host, session) }
+  const memory: SessionMemory = { prompt: '', text: '', title: readTitle(host, session) }
   memories.set(session.id, memory)
   return memory
 }
@@ -387,15 +392,35 @@ function isSubagent(session: SessionLike): boolean {
   return session.header?.origin === 'subagent' || (session.header?.delegationDepth ?? 0) > 0
 }
 
-/** Extract the plain text of one assistant message. */
-function assistantText(data: unknown): string {
-  const message = (data as { message?: { content?: readonly { type?: string; text?: string }[] } } | null)?.message
-  if (message?.content === undefined) return ''
-  return message.content
+/** Join the text blocks of one message. */
+function blocksText(content: readonly { type?: string; text?: string }[] | undefined): string {
+  if (content === undefined) return ''
+  return content
     .filter((block) => block.type === 'text' && typeof block.text === 'string')
     .map((block) => block.text ?? '')
     .join('\n')
     .trim()
+}
+
+/** Extract the plain text of one assistant message. */
+function assistantText(data: unknown): string {
+  const message = (data as { message?: { content?: readonly { type?: string; text?: string }[] } } | null)?.message
+  return blocksText(message?.content)
+}
+
+/**
+ * Extract a human prompt from a `user/message` event.
+ *
+ * The same event carries injected context — file-change notices, cron prompts,
+ * goal continuations — so the message's own source decides whether a person is
+ * speaking. Anything else returns empty and never becomes a notification body.
+ */
+function humanPrompt(data: unknown): string {
+  const message = data as
+    | { readonly content?: readonly { type?: string; text?: string }[]; readonly source?: { readonly kind?: string } }
+    | null
+  if (message?.source?.kind !== 'user') return ''
+  return blocksText(message.content)
 }
 
 /** Answer one SSE stream request. */
@@ -455,11 +480,6 @@ function optionalService<T>(host: DshHost, name: string): T | undefined {
   } catch {
     return undefined
   }
-}
-
-/** The predecessor plugin's document, read once on first run. */
-function legacyConfigPath(host: DshHost): string {
-  return join(profileDir(host), 'push-notify-config.json')
 }
 
 /** The profile directory: explicit env, then the Host service, then the default. */

@@ -9,7 +9,8 @@ Most setups end up with two plugins — one that shows browser notifications and
 ## What you get
 
 - **Browser channel** — system notifications with a per-kind sound, click to jump back to the session, collapse by kind so a burst stays one card.
-- **Bark channel** — APNs push to your phone even with the browser closed, per-kind sounds, a group, an icon, and a deep link back into the UI.
+- **Bark channel** — APNs push to your phone even with the browser closed, with a group, per-kind sounds, and an optional link back into the UI.
+- **Tells you what you asked** — the title is the session name with a status mark, the body is the prompt you last typed (falling back to the answer when a scheduled turn has none).
 - **One event model** — `completed`, `failed`, `interrupted`, `approval`, `question`. Each logical happening is delivered at most once.
 - **Quiet by design** — subagent sessions are silent, the session you are actively looking at stays quiet, and a stale presence report never hides an approval.
 - **One settings page**, bilingual, matching the Harness UI, with a test button per channel and masked secrets.
@@ -37,8 +38,7 @@ The Host owns one JSON document in the active profile directory (`~/.dsh/profile
 
 | Key | Meaning |
 |---|---|
-| `prefix` | Title prefix, rendered as `[text] ` (max 12 characters). |
-| `baseUrl` | UI root used by the push deep link, e.g. `http://127.0.0.1:3080`. Empty omits the link. |
+| `bark.baseUrl` | UI root a push click opens, e.g. `http://127.0.0.1:3080`. Empty pushes without a link. |
 | `notifySubagents` | Whether sessions spawned by another session may alert. Off by default. |
 | `events.<kind>.enabled` | Per-kind switch for both channels. |
 | `events.<kind>.sound` | Browser sound: `chime`, `fault`, `pop`, `alert`. |
@@ -46,7 +46,7 @@ The Host owns one JSON document in the active profile directory (`~/.dsh/profile
 | `browser.enabled` / `browser.volume` | Browser channel and its volume (0–1). |
 | `browser.currentSessionMode` | `hidden` (quiet only while the tab is visible), `unfocused` (quiet only while focused), `always`. |
 | `bark.enabled` / `bark.serverUrl` / `bark.deviceKey` | Bark channel and credentials. |
-| `bark.group` / `bark.icon` | Notification group and optional icon URL. |
+| `bark.group` | Notification group shown by the Bark app; defaults to `DSH`. |
 
 ## How it works
 

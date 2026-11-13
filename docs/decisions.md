@@ -47,7 +47,7 @@ document into two stores once browser-only preferences exist.
 
 **Consequence.** Secrets are the plugin's responsibility: they never leave the
 Host, are masked to their last four characters, and only an explicit `null`
-erases one. A first run imports `push-notify-config.json` and leaves it in place.
+erases one. Nothing is imported from a predecessor plugin (see D7).
 
 ## D4 — A custom settings page, not the generated plugin form
 
@@ -83,3 +83,42 @@ shipped as one npm package with one bundle patch.
 **Rejected.** A pnpm workspace with separately versioned packages. The plugin is
 small, the three layers ship together, and a single package keeps installation to
 one line.
+
+## D7 — No import from a predecessor plugin
+
+**Chosen.** The plugin owns one document and reads nothing else. A missing file
+means defaults.
+
+**Rejected.** Importing `push-notify-config.json` on first run (what D3 originally
+described). It made the first activation feel seamless, but it also meant every
+read had to reason about a second document's shape, and the copied group name
+outlived the decision to standardise on `DSH`. Two plugins that never speak to
+each other are simpler to reason about than a one-time translation path.
+
+**Consequence.** Upgrading means opening the settings page once. The predecessor's
+file is left untouched, so nothing is lost either way.
+
+## D8 — A notification reads like the conversation
+
+**Chosen.** Title: a status mark plus the session name. Body: the prompt the person
+last typed in that turn; a scheduled or injected turn has no prompt, so it falls
+back to the answer. Failures and interruptions append their reason after `·`.
+
+**Rejected.** The assistant's closing paragraph (the earlier behaviour). It reads
+like a summary of work the person did not ask to see on a lock screen, and on a
+phone it competes with the one thing that identifies the notification: the
+question that started it.
+
+**Consequence.** The Host must watch `user/message` and keep the last message whose
+`source.kind` is `user`, so injected context (cron, file-change notices, goal
+continuations) never becomes the body.
+
+## D9 — A channel folds open when it is on
+
+**Chosen.** The master switch and the two quieting rules come first; each channel's
+settings appear only while that channel is enabled, and per-kind sound lives in one
+table with an enable switch, a browser sound, a Bark sound, and a preview.
+
+**Rejected.** Always-visible channel blocks (the earlier layout). Half the fields
+were disabled most of the time, which makes a settings page look broken rather than
+configured.

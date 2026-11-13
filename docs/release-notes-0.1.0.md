@@ -14,8 +14,11 @@ fans the same decision out to every channel.
 **Browser** — system notifications with a per-kind sound, click to jump back to
 the session, collapse by kind, and quiet while you are looking at that session.
 
-**Phone** — Bark push with group, icon, per-kind sound and a deep link back into
+**Phone** — Bark push with group, per-kind sound and an optional link back into
 the UI; works with the browser closed.
+
+**Reads like the conversation** — the title is a status mark plus the session name,
+the body is the prompt you last typed, and failures append their reason.
 
 **One event model** — `completed`, `failed`, `interrupted`, `approval`,
 `question`. A turn is "completed" only when the Host actually says so;
@@ -42,9 +45,9 @@ Reload the page, open **Settings → Notifications**, paste the Bark key, press
 
 ## Upgrading from the two-plugin setup
 
-Nothing is removed automatically. The first run copies the predecessor's settings
-out of `push-notify-config.json` and leaves the original untouched, so you can
-delete the old plugins once the new page looks right.
+Nothing is removed automatically, and nothing is copied either: open the settings
+page once, paste the Bark key, and delete the old plugins when the new page looks
+right. The predecessor's own document stays where it is.
 
 ## Known limitations
 

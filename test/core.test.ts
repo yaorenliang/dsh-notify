@@ -43,23 +43,26 @@ describe('classifyTurnEnd', () => {
 })
 
 describe('render', () => {
-  it('prefers the assistant text for a completion', () => {
-    expect(completedBody('All green.', 'en')).toBe('All green.')
-    expect(completedBody('   ', 'zh')).toBe('本轮已完成。')
+  it('leads a completion with what the person asked', () => {
+    expect(completedBody('Fix the build', 'All green.', 'en')).toBe('Fix the build')
   })
 
-  it('explains a quota failure in the reader language', () => {
-    expect(failedBody('QUOTA', 'whatever', 'zh')).toContain('额度')
-    expect(failedBody('QUOTA', 'whatever', 'en')).toContain('quota')
+  it('falls back to the answer when the turn had no human prompt', () => {
+    expect(completedBody('  ', 'All green.', 'en')).toBe('All green.')
+    expect(completedBody('', '   ', 'zh')).toBe('本轮已完成。')
   })
 
-  it('keeps the provider message and appends an unknown code', () => {
-    expect(failedBody('E_TIMEOUT', 'upstream timed out', 'en')).toBe('upstream timed out (E_TIMEOUT)')
-    expect(failedBody(null, '', 'en')).toBe('The turn failed before it could answer.')
+  it('appends the outcome to the prompt for a failure', () => {
+    expect(failedBody('Fix the build', 'E_TIMEOUT', 'upstream timed out', 'en'))
+      .toBe('Fix the build · upstream timed out (E_TIMEOUT)')
+    expect(failedBody('', 'QUOTA', 'whatever', 'zh')).toContain('额度')
+    expect(failedBody('', 'QUOTA', 'whatever', 'en')).toContain('quota')
+    expect(failedBody('Fix the build', null, '', 'en')).toBe('Fix the build · The turn failed before it could answer.')
   })
 
-  it('names a signed-out abort', () => {
-    expect(interruptedBody({ kind: 'aborted', reason: { kind: 'hook', reason: 'deepseek-account/signed-out' } }, 'en'))
+  it('appends the reason to the prompt for an interruption', () => {
+    expect(interruptedBody('Fix the build', { kind: 'aborted' }, 'en')).toBe('Fix the build · The turn was aborted.')
+    expect(interruptedBody('', { kind: 'aborted', reason: { kind: 'hook', reason: 'deepseek-account/signed-out' } }, 'en'))
       .toContain('signed out')
   })
 
@@ -151,8 +154,8 @@ describe('config', () => {
   })
 
   it('drops malformed fields instead of breaking', () => {
-    const cfg = mergeConfig(DEFAULT_CONFIG, { prefix: 42, bark: { enabled: 'yes', serverUrl: '' }, browser: { volume: 9 } })
-    expect(cfg.prefix).toBe('')
+    const cfg = mergeConfig(DEFAULT_CONFIG, { locale: 42, bark: { enabled: 'yes', serverUrl: '' }, browser: { volume: 9 } })
+    expect(cfg.locale).toBe('auto')
     expect(cfg.bark.enabled).toBe(false)
     expect(cfg.bark.serverUrl).toBe('https://api.day.app')
     expect(cfg.browser.volume).toBe(1)

@@ -9,7 +9,8 @@
 ## 能力
 
 - **浏览器通道**：系统通知 + 每种事件独立音效 + 点击跳回对应会话 + 同类合并（一阵连响只留一张卡片）。
-- **Bark 通道**：APNs 推到手机，浏览器关着也能收到；可配分组、图标、每种事件独立铃声，点击深链回界面。
+- **Bark 通道**：APNs 推到手机，浏览器关着也能收到；可配分组、每种事件独立铃声，点击可选深链回界面。
+- **一眼看出你问了什么**：标题是「状态标记 + 会话名」，正文是你最后一次提问（定时任务这种没有提问的回合回退到助手回答）。
 - **统一事件模型**：`completed` / `failed` / `interrupted` / `approval` / `question`，一个逻辑事件最多送达一次。
 - **默认安静**：子 agent 会话静默；你正在看的会话不打扰；过期的"在线"报告不会吞掉授权提醒。
 - **一个设置页**：中英双语、贴合 Harness 视觉，两个通道各有测试按钮，密钥遮罩。
@@ -37,8 +38,7 @@ dsh plugin --profile web add ./dsh-notify
 
 | 键 | 含义 |
 |---|---|
-| `prefix` | 标题前缀，渲染为 `[文本] `（最多 12 字）。 |
-| `baseUrl` | 推送深链用的界面地址，如 `http://127.0.0.1:3080`；留空则不带链接。 |
+| `bark.baseUrl` | 点击推送打开的界面地址，如 `http://127.0.0.1:3080`；留空则不带链接。 |
 | `notifySubagents` | 是否让子 agent 会话也提醒，默认关。 |
 | `events.<kind>.enabled` | 每种事件的双通道开关。 |
 | `events.<kind>.sound` | 浏览器音效：`chime` / `fault` / `pop` / `alert`。 |
@@ -46,7 +46,7 @@ dsh plugin --profile web add ./dsh-notify
 | `browser.enabled` / `browser.volume` | 浏览器通道与音量（0–1）。 |
 | `browser.currentSessionMode` | `hidden`（仅在标签页可见时安静）/ `unfocused`（仅在聚焦时安静）/ `always`。 |
 | `bark.enabled` / `bark.serverUrl` / `bark.deviceKey` | Bark 通道与凭据。 |
-| `bark.group` / `bark.icon` | 通知分组与可选图标。 |
+| `bark.group` | Bark App 里显示的通知分组，默认 `DSH`。 |
 
 ## 工作原理
 

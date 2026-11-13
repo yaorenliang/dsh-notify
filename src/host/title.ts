@@ -1,8 +1,9 @@
 /**
  * How one event is titled on both channels.
  *
- * The title is the only string a person reads on a locked phone, so it carries
- * the kind and the session, in that order, and nothing else.
+ * The title carries the kind and the session, in that order, and nothing else: a
+ * lock screen has room for one line, and that line should answer "which
+ * conversation, and what happened".
  */
 import type { NotificationKind } from '../core/events.ts'
 
@@ -15,15 +16,8 @@ const MARKERS: Readonly<Record<NotificationKind, string>> = {
   question: '❓',
 }
 
-/** Compose `[prefix] marker session-title`. */
-export function composeTitle(prefix: string, kind: NotificationKind, sessionTitle: string): string {
-  const marker = MARKERS[kind]
+/** Compose `marker session-title`. */
+export function composeTitle(kind: NotificationKind, sessionTitle: string): string {
   const title = sessionTitle.trim().length > 0 ? sessionTitle.trim() : 'DeepSeek Harness'
-  return `${sanitizePrefix(prefix)}${marker} ${title}`
-}
-
-/** Normalise a user-typed prefix into `[text] `; empty stays empty. */
-export function sanitizePrefix(prefix: string): string {
-  const trimmed = prefix.trim().replace(/^\[|\]$/g, '').trim()
-  return trimmed.length === 0 ? '' : `[${trimmed.slice(0, 12)}] `
+  return `${MARKERS[kind]} ${title}`
 }

@@ -1,15 +1,14 @@
 /**
  * The "Settings → Notifications" page.
  *
- * One page, six blocks, one configuration. Booleans and choices write straight
- * to the Host because a switch is already a decision; the Bark connection group
- * is a form because a half-typed server URL should never be stored. Every string
- * comes from the i18n module, and every colour from a theme alias, so the page
- * reads as part of the settings shell rather than a plugin island.
+ * One page, one configuration. The master switch and the two quieting rules sit
+ * at the top, because they answer the only question that matters before the
+ * plumbing does: when am I willing to be interrupted? Each channel then folds
+ * open exactly when it is on, so the page carries no disabled furniture.
  */
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
-import { DEFAULT_CONFIG, NOTIFICATION_KINDS } from '../../core/config.ts'
+import { NOTIFICATION_KINDS } from '../../core/config.ts'
 import type { PublicConfig, SoundId } from '../../core/config.ts'
 import type { NotificationKind } from '../../core/events.ts'
 import type { CurrentSessionMode } from '../../core/policy.ts'
@@ -31,9 +30,7 @@ export interface NotificationsSectionProps {
 interface Drafts {
   readonly serverUrl?: string | undefined
   readonly deviceKey?: string | undefined
-  readonly icon?: string | undefined
   readonly group?: string | undefined
-  readonly prefix?: string | undefined
   readonly baseUrl?: string | undefined
 }
 
@@ -53,16 +50,13 @@ const EVENTS: readonly EventCopy[] = [
   { kind: 'question', title: 'events.question', description: 'events.question.desc' },
 ]
 
-/** The built-in browser sounds, in the order the configuration lists them. */
-const SOUNDS_ORDER: readonly SoundId[] = ['chime', 'fault', 'pop', 'alert']
-
-/** Copy for each built-in browser sound. */
-const SOUND_LABELS: Readonly<Record<SoundId, MessageKey>> = {
-  chime: 'sound.browser.chime',
-  fault: 'sound.browser.fault',
-  pop: 'sound.browser.pop',
-  alert: 'sound.browser.alert',
-}
+/** The built-in browser sounds, in the order the table lists them. */
+const SOUNDS: readonly { readonly value: SoundId; readonly label: MessageKey }[] = [
+  { value: 'chime', label: 'sound.browser.chime' },
+  { value: 'fault', label: 'sound.browser.fault' },
+  { value: 'pop', label: 'sound.browser.pop' },
+  { value: 'alert', label: 'sound.browser.alert' },
+]
 
 /** The Bark sound names the app understands. */
 const BARK_SOUNDS: readonly { readonly value: string; readonly label: MessageKey }[] = [
@@ -91,6 +85,10 @@ const MODES: readonly { readonly value: CurrentSessionMode; readonly label: Mess
   { value: 'always', label: 'timing.always' },
 ]
 
+const SOUND_OPTIONS = SOUNDS.map((sound) => ({ value: sound.value, label: t(sound.label) }))
+const BARK_OPTIONS = BARK_SOUNDS.map((sound) => ({ value: sound.value, label: t(sound.label) }))
+const MODE_OPTIONS = MODES.map((mode) => ({ value: mode.value, label: t(mode.label) }))
+
 /**
  * The page.
  *
@@ -101,9 +99,7 @@ export function NotificationsSection({ model }: NotificationsSectionProps): Reac
   const snapshot = useSyncExternalStore(model.subscribe, model.getSnapshot, model.getSnapshot)
   const [drafts, setDrafts] = useState<Drafts>({})
   const [volumeDraft, setVolumeDraft] = useState<number | null>(null)
-  const lastChannels = useRef<{ browser: boolean; bark: boolean }>({ browser: true, bark: false })
-
-  // The model keeps its last notice; the page shows it for a moment only.
+  const lastChannels = useRef<{ browser: boolean; bark: boolean }>({ browser: false, bark: false })
   const [visibleNotice, setVisibleNotice] = useState<string | null>(null)
 
   useEffect(() => {
@@ -149,14 +145,10 @@ export function NotificationsSection({ model }: NotificationsSectionProps): Reac
     )
   }
 
-  const edit = (patch: Drafts): void => {
-    setDrafts((previous) => ({ ...previous, ...patch }))
-  }
-
   const save = (patch: unknown): void => void model.save(patch)
+  const edit = (patch: Drafts): void => setDrafts((previous) => ({ ...previous, ...patch }))
 
   const masterOn = config.browser.enabled || config.bark.enabled
-  // With both channels off the rest has nothing to act on; the master stays live.
   const locked = !masterOn
   const disabled = busy || locked
 
@@ -164,15 +156,16 @@ export function NotificationsSection({ model }: NotificationsSectionProps): Reac
   const volume = volumeDraft ?? storedVolume
 
   const serverUrl = drafts.serverUrl ?? config.bark.serverUrl
-  const icon = drafts.icon ?? config.bark.icon
   const group = drafts.group ?? config.bark.group
-  const baseUrl = drafts.baseUrl ?? config.baseUrl
+  const baseUrl = drafts.baseUrl ?? config.bark.baseUrl
   const serverUrlInvalid = !isHttpUrl(normalizeServerUrl(serverUrl))
-  const iconInvalid = icon.trim().length > 0 && !isHttpUrl(icon.trim())
   const baseUrlInvalid = baseUrl.trim().length > 0 && !isHttpUrl(baseUrl.trim())
-  const dirty = isConnectionDirty(config, drafts)
+  const dirty =
+    (drafts.serverUrl !== undefined && normalizeServerUrl(drafts.serverUrl) !== config.bark.serverUrl) ||
+    (drafts.group !== undefined && drafts.group.trim() !== config.bark.group) ||
+    (drafts.baseUrl !== undefined && drafts.baseUrl.trim() !== config.bark.baseUrl) ||
+    (drafts.deviceKey !== undefined && drafts.deviceKey.trim().length > 0)
 
-  const masterDisabled = busy
   const pushBlocked = busy || !config.bark.enabled || !config.bark.deviceKey.configured
   const browserBlocked = busy || !config.browser.enabled || snapshot.permission !== 'granted'
   const allEventsOff = NOTIFICATION_KINDS.every((kind) => !config.events[kind].enabled)
@@ -198,18 +191,6 @@ export function NotificationsSection({ model }: NotificationsSectionProps): Reac
     save({ browser: { enabled: next } })
   }
 
-  const onEventToggle = (kind: NotificationKind, next: boolean): void => {
-    save({ events: { [kind]: { enabled: next } } })
-  }
-
-  const onSoundChange = (kind: NotificationKind, sound: SoundId): void => {
-    save({ events: { [kind]: { sound } } })
-  }
-
-  const onBarkSoundChange = (kind: NotificationKind, barkSound: string): void => {
-    save({ events: { [kind]: { barkSound } } })
-  }
-
   const onVolumeCommit = (): void => {
     if (volumeDraft === null || volumeDraft === storedVolume) return
     save({ browser: { volume: volumeDraft / 100 } })
@@ -220,26 +201,10 @@ export function NotificationsSection({ model }: NotificationsSectionProps): Reac
     if (drafts.serverUrl !== undefined) bark['serverUrl'] = normalizeServerUrl(drafts.serverUrl)
     // An empty key means "keep the stored one"; erasing is the explicit button.
     if (drafts.deviceKey !== undefined && drafts.deviceKey.trim().length > 0) bark['deviceKey'] = drafts.deviceKey.trim()
-    if (drafts.icon !== undefined) bark['icon'] = drafts.icon.trim()
     if (drafts.group !== undefined && drafts.group.trim().length > 0) bark['group'] = drafts.group.trim()
+    if (drafts.baseUrl !== undefined) bark['baseUrl'] = drafts.baseUrl.trim()
     await model.save({ bark })
     if (model.getSnapshot().error === null) setDrafts({})
-  }
-
-  const commitPrefix = (): void => {
-    const value = drafts.prefix
-    if (value === undefined) return
-    const next = value.slice(0, 12)
-    edit({ prefix: undefined })
-    if (next !== config.prefix) void model.save({ prefix: next })
-  }
-
-  const commitBaseUrl = (): void => {
-    const value = drafts.baseUrl
-    if (value === undefined) return
-    const next = value.trim()
-    edit({ baseUrl: undefined })
-    if (next !== config.baseUrl) void model.save({ baseUrl: next })
   }
 
   return (
@@ -263,302 +228,242 @@ export function NotificationsSection({ model }: NotificationsSectionProps): Reac
             title={t('master.switch')}
             description={t('master.desc')}
             checked={masterOn}
-            disabled={masterDisabled}
+            disabled={busy}
             onChange={onMasterChange}
           />
+          <div className="dn-indent">
+            <Field label={t('browser.timing')} hint={t('browser.timingHint')}>
+              <Segmented<CurrentSessionMode>
+                label={t('browser.timing')}
+                value={config.browser.currentSessionMode}
+                options={MODE_OPTIONS}
+                disabled={disabled}
+                onChange={(mode) => save({ browser: { currentSessionMode: mode } })}
+              />
+            </Field>
+            <SwitchRow
+              title={t('subagent.switch')}
+              description={t('subagent.hint')}
+              checked={config.notifySubagents}
+              disabled={disabled}
+              onChange={(next) => save({ notifySubagents: next })}
+            />
+          </div>
         </div>
       </section>
 
       <Block title={t('channel.title')}>
         <div className="dn-card">
-          <div className="dn-stack">
-            <div className="dn-rowBlock">
-              <SwitchRow
-                title={t('browser.switch')}
-                description={t('browser.desc')}
-                checked={config.browser.enabled}
-                disabled={disabled}
-                onChange={onBrowserToggle}
-              />
-              <div className="dn-statusLine">
-                <StateDot state={permissionDot(snapshot.permission)} />
-                <span>{t(permissionKey(snapshot.permission))}</span>
+          <div className="dn-channel">
+            <div className="dn-channelHead">
+              <div className="dn-rowText">
+                <span className="dn-rowTitle">{t('browser.switch')}</span>
+                <span className="dn-rowDesc">{t('browser.desc')}</span>
+              </div>
+              <div className="dn-rowAside">
+                <Tag tone={snapshot.permission === 'granted' ? 'neutral' : 'quiet'}>{permissionLabel(snapshot.permission)}</Tag>
+                <Switch
+                  label={t('browser.switch')}
+                  checked={config.browser.enabled}
+                  disabled={busy}
+                  onChange={onBrowserToggle}
+                />
               </div>
             </div>
+            {config.browser.enabled ? (
+              <div className="dn-channelBody">
+                <Field label={t('sound.volume')} hint={t('sound.volumeHint')}>
+                  <div className="dn-volumeRow">
+                    <input
+                      className="dn-range"
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      aria-label={t('sound.volume')}
+                      value={volume}
+                      disabled={busy}
+                      onChange={(event) => setVolumeDraft(Number(event.target.value))}
+                      onPointerUp={onVolumeCommit}
+                      onKeyUp={onVolumeCommit}
+                      onBlur={onVolumeCommit}
+                    />
+                    <span className="dn-volumeValue">{t('sound.volumeValue', { value: volume })}</span>
+                  </div>
+                </Field>
+                {snapshot.permission === 'denied' ? (
+                  <div className="dn-field">
+                    <p className="dn-hint">{t('browser.deniedHint')}</p>
+                    <Button onClick={() => void model.requestPermission()}>{t('browser.recheck')}</Button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
 
-            <Field label={t('browser.timing')} hint={t('browser.timingHint')}>
-              <Segmented<CurrentSessionMode>
-                label={t('browser.timing')}
-                value={config.browser.currentSessionMode}
-                options={MODES.map((mode) => ({ value: mode.value, label: t(mode.label) }))}
-                disabled={disabled}
-                onChange={(next) => save({ browser: { currentSessionMode: next } })}
-              />
-            </Field>
+          <div className="dn-channelSep" />
 
-            {snapshot.permission !== 'denied' ? null : (
-              <ErrorBar
-                text={t('browser.deniedHint')}
-                action={t('browser.recheck')}
-                onRetry={() => void model.refresh()}
-              />
-            )}
-
-            <div className="dn-rowBlock">
-              <SwitchRow
-                title={t('bark.switch')}
-                description={t('bark.desc')}
-                checked={config.bark.enabled}
-                disabled={disabled}
-                onChange={(next) => save({ bark: { enabled: next } })}
-              />
-            </div>
-
-            <Field
-              label={t('bark.serverUrl')}
-              hint={t('bark.serverUrlHint')}
-              invalid={serverUrlInvalid ? t('invalid.url') : null}
-            >
-              <input
-                className="dn-input"
-                type="url"
-                inputMode="url"
-                aria-label={t('bark.serverUrl')}
-                aria-invalid={serverUrlInvalid}
-                placeholder={DEFAULT_CONFIG.bark.serverUrl}
-                value={serverUrl}
-                disabled={disabled}
-                onChange={(event) => edit({ serverUrl: event.target.value })}
-              />
-            </Field>
-
-            <Field
-              label={t('bark.deviceKey')}
-              hint={t('bark.deviceKeyHint')}
-              badge={
+          <div className="dn-channel">
+            <div className="dn-channelHead">
+              <div className="dn-rowText">
+                <span className="dn-rowTitle">{t('bark.switch')}</span>
+                <span className="dn-rowDesc">{t('bark.desc')}</span>
+              </div>
+              <div className="dn-rowAside">
                 <Tag tone={config.bark.deviceKey.configured ? 'neutral' : 'quiet'}>
                   {config.bark.deviceKey.configured ? t('secret.set') : t('secret.unset')}
                 </Tag>
-              }
-              action={
-                config.bark.deviceKey.configured ? (
-                  <Button
-                    variant="ghost"
-                    disabled={disabled}
-                    onClick={() => save({ bark: { deviceKey: null } })}
-                  >
-                    {t('secret.clear')}
-                  </Button>
-                ) : null
-              }
-            >
-              <input
-                className="dn-input"
-                type="password"
-                autoComplete="new-password"
-                aria-label={t('bark.deviceKey')}
-                placeholder={config.bark.deviceKey.configured ? config.bark.deviceKey.masked : ''}
-                value={drafts.deviceKey ?? ''}
-                disabled={disabled}
-                onChange={(event) => edit({ deviceKey: event.target.value })}
-              />
-            </Field>
-
-            <Field label={t('bark.icon')} hint={t('bark.iconHint')} invalid={iconInvalid ? t('invalid.url') : null}>
-              <input
-                className="dn-input"
-                type="url"
-                inputMode="url"
-                aria-label={t('bark.icon')}
-                aria-invalid={iconInvalid}
-                value={icon}
-                disabled={disabled}
-                onChange={(event) => edit({ icon: event.target.value })}
-              />
-            </Field>
-
-            <Field label={t('bark.group')} hint={t('bark.groupHint')}>
-              <input
-                className="dn-input"
-                type="text"
-                aria-label={t('bark.group')}
-                placeholder={DEFAULT_CONFIG.bark.group}
-                value={group}
-                disabled={disabled}
-                onChange={(event) => edit({ group: event.target.value })}
-              />
-            </Field>
-          </div>
-
-          <div className="dn-footer">
-            <div className="dn-footer__actions">
-              {dirty ? (
-                <Button variant="ghost" disabled={busy} onClick={() => setDrafts({})}>
-                  {t('form.discard')}
-                </Button>
-              ) : null}
-              <Button
-                variant="save"
-                disabled={!dirty || busy || serverUrlInvalid || iconInvalid}
-                onClick={() => void commitConnection()}
-              >
-                {busy ? t('form.saving') : t('form.save')}
-              </Button>
+                <Switch
+                  label={t('bark.switch')}
+                  checked={config.bark.enabled}
+                  disabled={busy}
+                  onChange={(next) => save({ bark: { enabled: next } })}
+                />
+              </div>
             </div>
+            {config.bark.enabled ? (
+              <div className="dn-channelBody">
+                <Field label={t('bark.serverUrl')} hint={t('bark.serverUrlHint')}>
+                  <input
+                    className={serverUrlInvalid ? 'dn-input dn-invalid' : 'dn-input'}
+                    value={serverUrl}
+                    placeholder="https://api.day.app"
+                    spellCheck={false}
+                    onChange={(event) => edit({ serverUrl: event.target.value })}
+                    onBlur={commitConnection}
+                  />
+                </Field>
+                <Field label={t('bark.deviceKey')} hint={t('bark.deviceKeyHint')}>
+                  <div className="dn-row">
+                    <input
+                      className="dn-input"
+                      type="password"
+                      value={drafts.deviceKey ?? ''}
+                      placeholder={config.bark.deviceKey.configured ? config.bark.deviceKey.masked : t('secret.unset')}
+                      spellCheck={false}
+                      autoComplete="off"
+                      onChange={(event) => edit({ deviceKey: event.target.value })}
+                      onBlur={commitConnection}
+                    />
+                    {config.bark.deviceKey.configured ? (
+                      <Button
+                        onClick={() => {
+                          edit({ deviceKey: undefined })
+                          save({ bark: { deviceKey: null } })
+                        }}
+                      >
+                        {t('secret.clear')}
+                      </Button>
+                    ) : null}
+                  </div>
+                </Field>
+                <Field label={t('bark.group')} hint={t('bark.groupHint')}>
+                  <input
+                    className="dn-input"
+                    value={group}
+                    onChange={(event) => edit({ group: event.target.value })}
+                    onBlur={commitConnection}
+                  />
+                </Field>
+                <Field label={t('bark.baseUrl')} hint={t('bark.baseUrlHint')}>
+                  <input
+                    className={baseUrlInvalid ? 'dn-input dn-invalid' : 'dn-input'}
+                    value={baseUrl}
+                    placeholder="http://127.0.0.1:3080"
+                    spellCheck={false}
+                    onChange={(event) => edit({ baseUrl: event.target.value })}
+                    onBlur={commitConnection}
+                  />
+                </Field>
+                <div className="dn-actions">
+                  <Button variant="save" disabled={busy || !dirty || serverUrlInvalid || baseUrlInvalid} onClick={() => void commitConnection()}>
+                    {busy ? t('form.saving') : t('form.save')}
+                  </Button>
+                  {dirty ? (
+                    <Button variant="ghost" disabled={busy} onClick={() => setDrafts({})}>
+                      {t('form.discard')}
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </Block>
 
       <Block title={t('events.title')}>
         <div className="dn-card">
-          <div className="dn-stack">
-            {allEventsOff ? <p className="dn-warn">{t('events.empty')}</p> : null}
+          <div className="dn-sound">
+            <div className="dn-sound__head">
+              <span>{t('sound.tableEvent')}</span>
+              <span />
+              <span>{t('sound.tableLocal')}</span>
+              <span>{t('sound.tableBark')}</span>
+              <span />
+            </div>
             {EVENTS.map((event) => (
-              <SwitchRow
-                key={event.kind}
-                title={t(event.title)}
-                description={t(event.description)}
-                checked={config.events[event.kind].enabled}
-                disabled={disabled}
-                onChange={(next) => onEventToggle(event.kind, next)}
-              />
+              <div className="dn-sound__row" key={event.kind}>
+                <span className="dn-sound__name" title={t(event.description)}>{t(event.title)}</span>
+                <Switch
+                  label={t(event.title)}
+                  checked={config.events[event.kind].enabled}
+                  disabled={disabled}
+                  onChange={(next) => save({ events: { [event.kind]: { enabled: next } } })}
+                />
+                <SelectMenu<SoundId>
+                  label={t('sound.tableLocal')}
+                  value={config.events[event.kind].sound}
+                  options={SOUND_OPTIONS}
+                  disabled={disabled || !config.browser.enabled}
+                  onChange={(sound) => save({ events: { [event.kind]: { sound } } })}
+                />
+                <SelectMenu<string>
+                  label={t('sound.tableBark')}
+                  value={config.events[event.kind].barkSound}
+                  options={BARK_OPTIONS}
+                  disabled={disabled || !config.bark.enabled}
+                  onChange={(barkSound) => save({ events: { [event.kind]: { barkSound } } })}
+                />
+                <Button
+                  variant="ghost"
+                  disabled={disabled || !config.browser.enabled}
+                  title={t('sound.previewTitle', { name: t(SOUNDS.find((sound) => sound.value === config.events[event.kind].sound)?.label ?? 'sound.browser.chime') })}
+                  onClick={() => play(config.events[event.kind].sound, config.browser.volume)}
+                >
+                  {t('sound.preview')}
+                </Button>
+              </div>
             ))}
           </div>
-        </div>
-      </Block>
-
-      <Block title={t('sound.title')}>
-        <div className="dn-card">
-          <div className="dn-stack">
-            <Field label={t('sound.volume')} hint={t('sound.volumeHint')}>
-              <div className="dn-volumeRow">
-                <input
-                  className="dn-range"
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={1}
-                  aria-label={t('sound.volume')}
-                  value={volume}
-                  disabled={disabled}
-                  onChange={(event) => setVolumeDraft(Number(event.target.value))}
-                  onPointerUp={onVolumeCommit}
-                  onKeyUp={onVolumeCommit}
-                  onBlur={onVolumeCommit}
-                />
-                <span className="dn-volumeValue">{t('sound.volumeValue', { value: volume })}</span>
-              </div>
-            </Field>
-
-            <div className="dn-sound">
-              <div className="dn-sound__head">
-                <span>{t('sound.tableEvent')}</span>
-                <span>{t('sound.tableLocal')}</span>
-                <span>{t('sound.tableBark')}</span>
-                <span />
-              </div>
-              {EVENTS.map((event) => (
-                <div className="dn-sound__row" key={event.kind}>
-                  <span className="dn-sound__name">{t(event.title)}</span>
-                  <SelectMenu<SoundId>
-                    label={t('sound.tableLocal')}
-                    value={config.events[event.kind].sound}
-                    options={SOUNDS_ORDER.map((sound) => ({ value: sound, label: t(SOUND_LABELS[sound]) }))}
-                    disabled={disabled}
-                    onChange={(next) => onSoundChange(event.kind, next)}
-                  />
-                  <SelectMenu<string>
-                    label={t('sound.tableBark')}
-                    value={config.events[event.kind].barkSound}
-                    options={BARK_SOUNDS.map((sound) => ({ value: sound.value, label: t(sound.label) }))}
-                    disabled={disabled}
-                    onChange={(next) => onBarkSoundChange(event.kind, next)}
-                  />
-                  <Button
-                    variant="ghost"
-                    disabled={disabled}
-                    title={t('sound.previewTitle', { name: t(SOUND_LABELS[config.events[event.kind].sound]) })}
-                    onClick={() => play(config.events[event.kind].sound, volume / 100)}
-                  >
-                    {t('sound.preview')}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
+          {allEventsOff ? <p className="dn-warn">{t('events.empty')}</p> : null}
         </div>
       </Block>
 
       <Block title={t('status.title')}>
         <div className="dn-card">
           <div className="dn-stack">
-            <div className="dn-rowBlock">
-              <StatusRow label={t('status.barkChannel')} value={readyText(state === null ? null : state.channels.bark)} />
-              <StatusRow
-                label={t('status.browserChannel')}
-                value={readyText(state === null ? null : state.channels.browser)}
-              />
-              <StatusRow label={t('status.permission')} value={t(permissionKey(snapshot.permission))} />
-              <StatusRow
-                label={t('status.browsers')}
-                value={state === null ? t('status.unknown') : String(state.browsers)}
-              />
-            </div>
-            <div className="dn-actions">
-              <Button
-                disabled={pushBlocked}
-                title={pushBlocked ? t('status.testPushBlocked') : undefined}
-                onClick={() => void model.test('bark')}
-              >
-                {t('status.testPush')}
-              </Button>
-              <Button
-                disabled={browserBlocked}
-                title={browserBlocked ? t('status.testBrowserBlocked') : undefined}
-                onClick={() => void model.test('browser')}
-              >
+            <div className="dn-statusLine">
+              <StateDot state={snapshot.permission === 'granted' ? 'done' : 'idle'} />
+              <span className="dn-rowText">
+                <span className="dn-rowTitle">{t('status.browserChannel')}</span>
+                <span className="dn-rowDesc">{permissionLabel(snapshot.permission)}</span>
+              </span>
+              <Button disabled={browserBlocked} title={browserBlocked ? t('status.testBrowserBlocked') : undefined} onClick={() => void model.test('browser')}>
                 {t('status.testBrowser')}
               </Button>
             </div>
-          </div>
-        </div>
-      </Block>
-
-      <Block title={t('advanced.title')}>
-        <div className="dn-card">
-          <div className="dn-stack">
-            <SwitchRow
-              title={t('advanced.subagents')}
-              description={t('advanced.subagentsHint')}
-              checked={config.notifySubagents}
-              disabled={disabled}
-              onChange={(next) => save({ notifySubagents: next })}
-            />
-            <Field label={t('advanced.prefix')} hint={t('advanced.prefixHint')}>
-              <input
-                className="dn-input"
-                type="text"
-                maxLength={12}
-                aria-label={t('advanced.prefix')}
-                value={drafts.prefix ?? config.prefix}
-                disabled={disabled}
-                onChange={(event) => edit({ prefix: event.target.value })}
-                onBlur={commitPrefix}
-              />
-            </Field>
-            <Field label={t('advanced.baseUrl')} hint={t('advanced.baseUrlHint')} invalid={baseUrlInvalid ? t('invalid.url') : null}>
-              <input
-                className="dn-input"
-                type="url"
-                inputMode="url"
-                aria-label={t('advanced.baseUrl')}
-                aria-invalid={baseUrlInvalid}
-                value={baseUrl}
-                disabled={disabled}
-                onChange={(event) => edit({ baseUrl: event.target.value })}
-                onBlur={commitBaseUrl}
-              />
-            </Field>
+            <div className="dn-statusLine">
+              <StateDot state={config.bark.deviceKey.configured && config.bark.enabled ? 'done' : 'idle'} />
+              <span className="dn-rowText">
+                <span className="dn-rowTitle">{t('status.barkChannel')}</span>
+                <span className="dn-rowDesc">
+                  {config.bark.deviceKey.configured ? t('status.ready') : t('status.notReady')} · {t('status.browsers')} {state?.browsers ?? t('status.unknown')}
+                </span>
+              </span>
+              <Button disabled={pushBlocked} title={pushBlocked ? t('status.testPushBlocked') : undefined} onClick={() => void model.test('bark')}>
+                {t('status.testPush')}
+              </Button>
+            </div>
           </div>
         </div>
       </Block>
@@ -566,7 +471,7 @@ export function NotificationsSection({ model }: NotificationsSectionProps): Reac
   )
 }
 
-/** A block: heading plus whatever the block owns. */
+/** A titled group of cards. */
 function Block({ title, children }: { readonly title: string; readonly children: ReactNode }): ReactNode {
   return (
     <section className="dn-block">
@@ -576,141 +481,81 @@ function Block({ title, children }: { readonly title: string; readonly children:
   )
 }
 
-/** A title, an explanation, and a switch on the right. */
-function SwitchRow({
-  title,
-  description,
-  checked,
-  disabled,
-  onChange,
-}: {
-  readonly title: string
-  readonly description?: string | undefined
-  readonly checked: boolean
-  readonly disabled?: boolean | undefined
-  readonly onChange: (next: boolean) => void
-}): ReactNode {
-  return (
-    <div className="dn-row">
-      <div className="dn-rowText">
-        <span className="dn-rowTitle">{title}</span>
-        {description === undefined ? null : <span className="dn-rowDesc">{description}</span>}
-      </div>
-      <Switch checked={checked} label={title} disabled={disabled} onChange={onChange} />
-    </div>
-  )
-}
-
-/** One labelled control, with the label's badges and the field's own messages. */
-function Field({
-  label,
-  hint,
-  invalid,
-  badge,
-  action,
-  children,
-}: {
-  readonly label: string
-  readonly hint?: string | null | undefined
-  readonly invalid?: string | null | undefined
-  readonly badge?: ReactNode
-  readonly action?: ReactNode
-  readonly children: ReactNode
-}): ReactNode {
+/** A label, an optional hint, and one control. */
+function Field({ label, hint, children }: { readonly label: string; readonly hint?: string | undefined; readonly children: ReactNode }): ReactNode {
   return (
     <div className="dn-field">
       <div className="dn-fieldHead">
         <span className="dn-label">{label}</span>
-        {badge}
-        {action}
+        {hint === undefined ? null : <span className="dn-hint">{hint}</span>}
       </div>
       {children}
-      {invalid === undefined || invalid === null ? null : <p className="dn-invalid">{invalid}</p>}
-      {hint === undefined || hint === null ? null : <p className="dn-hint">{hint}</p>}
     </div>
   )
 }
 
-/** One read-only "name: value" line. */
-function StatusRow({ label, value }: { readonly label: string; readonly value: string }): ReactNode {
-  return (
-    <div className="dn-kv">
-      <span className="dn-kv__key">{label}</span>
-      <span className="dn-kv__value">{value}</span>
-    </div>
-  )
-}
-
-/** One error line with its retry action. */
-function ErrorBar({
-  text,
-  action,
-  onRetry,
-}: {
-  readonly text: string
-  readonly action?: string | undefined
-  readonly onRetry: () => void
+/** A boolean row: title, description, switch. */
+function SwitchRow(props: {
+  readonly title: string
+  readonly description: string
+  readonly checked: boolean
+  readonly disabled: boolean
+  readonly onChange: (next: boolean) => void
 }): ReactNode {
   return (
-    <div className="dn-errorBar">
-      <span className="dn-errorBar__text" role="alert">
-        {text}
-      </span>
-      <Button onClick={onRetry}>{action ?? t('error.retry')}</Button>
+    <div className="dn-rowBlock">
+      <div className="dn-rowText">
+        <span className="dn-rowTitle">{props.title}</span>
+        <span className="dn-rowDesc">{props.description}</span>
+      </div>
+      <Switch label={props.title} checked={props.checked} disabled={props.disabled} onChange={props.onChange} />
     </div>
   )
 }
 
-/** Trim a server URL and fall back to the documented default when empty. */
-function normalizeServerUrl(raw: string): string {
-  const trimmed = raw.trim().replace(/\/+$/, '')
-  return trimmed.length === 0 ? DEFAULT_CONFIG.bark.serverUrl : trimmed
+/** The failure bar with its retry action. */
+function ErrorBar({ text, onRetry }: { readonly text: string; readonly onRetry: () => void }): ReactNode {
+  return (
+    <div className="dn-errorBar" role="alert">
+      <span className="dn-errorBar__text">{text}</span>
+      <Button variant="ghost" onClick={onRetry}>
+        {t('error.retry')}
+      </Button>
+    </div>
+  )
 }
 
-/** Accept only absolute http(s) addresses; everything else is a typo. */
-function isHttpUrl(value: string): boolean {
-  return /^https?:\/\/[^\s]+$/i.test(value)
-}
-
-/** True when the connection form holds something other than the stored values. */
-function isConnectionDirty(config: PublicConfig, drafts: Drafts): boolean {
-  if (drafts.serverUrl !== undefined && normalizeServerUrl(drafts.serverUrl) !== config.bark.serverUrl) return true
-  if (drafts.deviceKey !== undefined && drafts.deviceKey.trim().length > 0) return true
-  if (drafts.icon !== undefined && drafts.icon.trim() !== config.bark.icon) return true
-  if (drafts.group !== undefined && drafts.group.trim().length > 0 && drafts.group.trim() !== config.bark.group) return true
-  return false
-}
-
-/** The translation key for a permission state. */
-function permissionKey(permission: Permission): MessageKey {
+/** The copy for a browser notification permission state. */
+function permissionLabel(permission: Permission): string {
   switch (permission) {
     case 'granted':
-      return 'browser.permission.granted'
-    case 'default':
-      return 'browser.permission.default'
+      return t('browser.permission.granted')
     case 'denied':
-      return 'browser.permission.denied'
+      return t('browser.permission.denied')
     case 'unsupported':
-      return 'browser.permission.unsupported'
+      return t('browser.permission.unsupported')
+    default:
+      return t('browser.permission.default')
   }
 }
 
-/** The dot colour for a permission state. */
-function permissionDot(permission: Permission): 'done' | 'idle' | 'error' {
-  if (permission === 'granted') return 'done'
-  if (permission === 'denied') return 'error'
-  return 'idle'
-}
-
-/** Host readiness as a word. */
-function readyText(ready: boolean | null): string {
-  if (ready === null) return t('status.unknown')
-  return ready ? t('status.ready') : t('status.notReady')
-}
-
-/** The model reports English notices; the page speaks the reader's language. */
+/** The stored notice code as a sentence. */
 function noticeText(notice: string): string {
-  if (notice === 'Saved') return t('notice.saved')
-  if (notice.startsWith('Test sent')) return t('notice.testSent')
-  return notice
+  return notice === 'Saved' ? t('notice.saved') : t('notice.testSent')
+}
+
+/** Trim a trailing slash from a server root. */
+function normalizeServerUrl(value: string): string {
+  return value.trim().replace(/\/+$/, '')
+}
+
+/** Whether a string is an absolute http(s) address. */
+function isHttpUrl(value: string): boolean {
+  if (value.length === 0) return false
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
 }
