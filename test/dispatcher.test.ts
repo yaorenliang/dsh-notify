@@ -6,12 +6,15 @@ import type { NotificationEvent } from '../src/core/events.ts'
 const at = 1_700_000_000_000
 const event: NotificationEvent = { id: 'turn-1', kind: 'completed', sessionId: 's1', sessionTitle: 'Build', body: 'Done', at }
 
-function setup(configPatch: Record<string, unknown> = { bark: { enabled: true, deviceKey: 'k' }, browser: { enabled: true } }) {
+function setup(
+  configPatch: Record<string, unknown> = { bark: { enabled: true, deviceKey: 'k' }, browser: { enabled: true } },
+  clock: { now: number } = { now: at },
+) {
   const browser = vi.fn((_event: NotificationEvent, _title: string) => true)
   const bark = vi.fn(async () => ({ ok: true as const }))
   const config = mergeConfig(DEFAULT_CONFIG, configPatch)
-  const dispatcher = new Dispatcher({ config: () => config, presence: () => null, browser, bark, now: () => at })
-  return { dispatcher, browser, bark }
+  const dispatcher = new Dispatcher({ config: () => config, presence: () => null, browser, bark, now: () => clock.now })
+  return { dispatcher, browser, bark, clock }
 }
 
 describe('Dispatcher', () => {
@@ -54,6 +57,33 @@ describe('Dispatcher', () => {
     const outcome = dispatcher.dispatch(event, { subagent: false })
     expect(outcome.channels).toEqual(['browser'])
     expect(bark).not.toHaveBeenCalled()
+  })
+
+  it('holds the burst limit per session and then recovers', () => {
+    const { dispatcher, clock, browser } = setup()
+    for (let index = 0; index < 6; index += 1) {
+      expect(dispatcher.dispatch({ ...event, id: `t${index}` }, { subagent: false }).delivered).toBe(true)
+    }
+    expect(dispatcher.dispatch({ ...event, id: 't7' }, { subagent: false }).suppressed).toBe('rate-limit')
+    expect(browser).toHaveBeenCalledTimes(6)
+
+    clock.now += 61_000
+    expect(dispatcher.dispatch({ ...event, id: 't8' }, { subagent: false }).delivered).toBe(true)
+  })
+
+  it('reports only the channels that actually delivered', () => {
+    const { dispatcher, browser } = setup()
+    browser.mockReturnValue(false)
+    const outcome = dispatcher.dispatch(event, { subagent: false })
+    expect(outcome.delivered).toBe(true)
+    expect(outcome.channels).toEqual(['bark'])
+  })
+
+  it('lets a repeated id through once its window has passed', () => {
+    const { dispatcher, clock } = setup()
+    dispatcher.dispatch(event, { subagent: false })
+    clock.now += 11 * 60_000
+    expect(dispatcher.dispatch(event, { subagent: false }).delivered).toBe(true)
   })
 
   it('applies the prefix to the title', () => {

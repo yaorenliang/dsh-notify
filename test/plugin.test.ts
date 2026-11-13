@@ -158,9 +158,37 @@ describe('plugin wiring', () => {
     expect(raced).toBe('timeout')
   })
 
+  it('cancels a completion that is followed by another turn', async () => {
+    const stream = host.routes.get('/api/dsh-notify/stream')!
+    const response = await stream.fetch(new Request('http://x/api/dsh-notify/stream'))
+    await host.routes.get('/api/dsh-notify/config')!.fetch(new Request('http://x/api/dsh-notify/config', {
+      method: 'POST',
+      body: JSON.stringify({ browser: { enabled: true } }),
+    }))
+    const frames = frameReader(response)
+    await frames.next()
+    const onEvent = host.listeners.get('session/event')!
+    const target = session('s3')
+    onEvent(target, { type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } })
+    onEvent(target, { type: 'turn/start', data: { turn: 2 } })
+    const raced = await Promise.race([frames.next(), new Promise<string>((resolve) => setTimeout(() => resolve('timeout'), 1200))])
+    frames.close()
+    expect(raced).toBe('timeout')
+  })
+
+  it('always continues the approval waterfall', async () => {
+    const listener = host.listeners.get('approval/request') as (request: unknown, next: () => Promise<string>) => Promise<string>
+    const answered = await listener({ agent: { session: session('s4') }, toolName: 'bash', callId: 'c1' }, async () => 'user-answer')
+    expect(answered).toBe('user-answer')
+  })
+
   it('reports presence and counts a browser in its state', async () => {
     const stream = host.routes.get('/api/dsh-notify/stream')!
     await stream.fetch(new Request('http://x/api/dsh-notify/stream'))
+    await host.routes.get('/api/dsh-notify/presence')!.fetch(new Request('http://x/api/dsh-notify/presence', {
+      method: 'POST',
+      body: JSON.stringify({ clientId: 'tab-background', visible: true, focused: false, sessionId: 'other' }),
+    }))
     await host.routes.get('/api/dsh-notify/presence')!.fetch(new Request('http://x/api/dsh-notify/presence', {
       method: 'POST',
       body: JSON.stringify({ clientId: 'tab-1', visible: true, focused: true, sessionId: null }),
