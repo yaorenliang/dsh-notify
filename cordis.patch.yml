@@ -1,0 +1,5 @@
+# dsh-notify bundle patch: one Loader row whose Node half owns both transports
+# and serves the browser half through dsh.client.
+- insert:
+    - id: dsh-notify
+      name: 'dsh-notify'

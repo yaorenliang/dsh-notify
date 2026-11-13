@@ -1,0 +1,4 @@
+# pnpm asks before running a dependency's install scripts; esbuild's postinstall
+# only resolves its platform binary and is safe to allow.
+allowBuilds:
+  esbuild: true
