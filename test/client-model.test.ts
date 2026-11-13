@@ -17,7 +17,7 @@ function respond(body: unknown): Response {
 }
 
 beforeEach(() => {
-  stored = { locale: 'auto', prefix: 'DSH' }
+  stored = { locale: 'auto', bark: { group: 'DSH' } }
   testAnswer = { ok: true, channel: 'bark', result: { ok: true } }
   calls = []
   vi.stubGlobal('fetch', async (input: string, init?: RequestInit) => {
@@ -59,11 +59,11 @@ describe('settings model', () => {
   it('writes a patch and reports it saved', async () => {
     const model = createSettingsModel()
     await model.refresh()
-    await model.save({ prefix: 'ray' })
+    await model.save({ bark: { group: 'ray' } })
 
     const post = calls.find((call) => call.method === 'POST')
-    expect(post?.body).toEqual({ prefix: 'ray' })
-    expect(model.getSnapshot().config).toMatchObject({ prefix: 'ray' })
+    expect(post?.body).toEqual({ bark: { group: 'ray' } })
+    expect(model.getSnapshot().config).toMatchObject({ bark: { group: 'ray' } })
     expect(model.getSnapshot().notice).toBe('Saved')
     expect(model.getSnapshot().error).toBeNull()
   })
