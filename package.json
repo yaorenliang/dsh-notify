@@ -61,7 +61,8 @@
     "build": "node scripts/build.mjs",
     "preview": "node scripts/preview.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verify": "tsc --noEmit && vitest run && node scripts/build.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.1.0",

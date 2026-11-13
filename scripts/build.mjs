@@ -1,9 +1,13 @@
 import { build } from 'esbuild'
+import { execFileSync } from 'node:child_process'
 import { mkdir, rm } from 'node:fs/promises'
 
 const out = 'lib'
 await rm(out, { recursive: true, force: true })
 await mkdir(out, { recursive: true })
+
+// Declarations keep "types" honest for the published package.
+execFileSync('npx', ['tsc', '-p', 'tsconfig.build.json'], { stdio: 'inherit' })
 
 const shared = {
   bundle: true,

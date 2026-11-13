@@ -82,8 +82,8 @@ export function apply(ctx: Context): void {
 
   services.slots.inject('settings.section', () => services.slots.register({
     name: 'settings.section',
-    id: 'notifications',
-    order: 40,
+    id: 'dsh-notify',
+    order: 41,
     label: () => sectionLabel(),
     inject: () => ({ model }),
   }, NotificationsSection))
