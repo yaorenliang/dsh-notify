@@ -6,7 +6,7 @@ import type { NotificationEvent } from '../src/core/events.ts'
 
 const at = 1_700_000_000_000
 const event: NotificationEvent = {
-  id: 'turn-3', kind: 'completed', sessionId: 'session-7', sessionTitle: 'Fix the build', body: 'Done', at, turn: 3,
+  id: 'turn-3', kind: 'completed', sessionId: 'session-7', sessionTitle: 'Fix the build', body: 'Done', at,
 }
 
 function configure(patch: Record<string, unknown>) {

@@ -131,7 +131,6 @@ export function apply(ctx: Context): void {
       id: `turn:${session.id}:${data?.turn ?? 0}`,
       kind,
       body,
-      ...(data?.turn !== undefined ? { turn: data.turn } : {}),
     }
 
     if (kind === 'completed') {
@@ -308,7 +307,7 @@ export function apply(ctx: Context): void {
   }
 
   /** Classify-time dispatch: reads the session's title and subagent fact. */
-  function dispatch(partial: Pick<NotificationEvent, 'id' | 'kind' | 'body' | 'turn'>, session: SessionLike): void {
+  function dispatch(partial: Pick<NotificationEvent, 'id' | 'kind' | 'body'>, session: SessionLike): void {
     const config = store.get()
     if (!config.events[partial.kind].enabled) return
     const memory = memoryOf(memories, host, session)
@@ -319,7 +318,6 @@ export function apply(ctx: Context): void {
       sessionTitle: memory.title,
       body: partial.body,
       at: Date.now(),
-      ...(partial.turn !== undefined ? { turn: partial.turn } : {}),
     }
     const outcome = dispatcher.dispatch(event, { subagent: isSubagent(session) })
     if (outcome.suppressed === 'rate-limit') host.logger?.warn?.(`dsh-notify: burst limit reached for ${session.id}`)

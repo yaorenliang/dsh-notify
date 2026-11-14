@@ -31,12 +31,8 @@ export interface NotificationEvent {
   readonly sessionTitle: string
   /** Body text for the system notification and the push. */
   readonly body: string
-  /** Optional machine detail: tool name, error code, question options. */
-  readonly detail?: string
   /** Event time in epoch milliseconds. */
   readonly at: number
-  /** Turn number, for turn-scoped kinds. */
-  readonly turn?: number
 }
 
 /** The reason shape `turn/end` carries, narrowed to the fields read here. */
