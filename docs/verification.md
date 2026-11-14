@@ -70,7 +70,7 @@ and the settings page appear after a page reload, without a restart.
 ## Rollback
 
 - Disable the plugin: remove `dsh-notify` from `dsh.profile.bundles` in
-  `~/.dsh/profiles/web/package.json`, or `dsh plugin --profile web remove dsh-notify`.
+  `~/.dsh/profiles/web/package.json`, or `dsh plugin --profile web remove @yaorenliang/dsh-notify`.
 - The predecessor's document `push-notify-config.json` is never modified, so
   re-enabling `dsh-push-notify` restores its behaviour.
 - The plugin's own document lives at `~/.dsh/profiles/web/dsh-notify.json`.

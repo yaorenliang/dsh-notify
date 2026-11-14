@@ -37,7 +37,7 @@ four characters, an echoed mask keeps the stored value, and only an explicit
 ## Install
 
 ```sh
-dsh plugin --profile web add dsh-notify
+dsh plugin --profile web add @yaorenliang/dsh-notify
 ```
 
 Reload the page, open **Settings → Notifications**, paste the Bark key, press

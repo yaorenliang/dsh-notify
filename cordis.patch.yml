@@ -2,4 +2,4 @@
 # and serves the browser half through dsh.client.
 - insert:
     - id: dsh-notify
-      name: 'dsh-notify'
+      name: '@yaorenliang/dsh-notify'
