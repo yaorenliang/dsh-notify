@@ -53,7 +53,7 @@ export class ConfigStore {
     return this.config
   }
 
-  /** Apply a browser patch, persist it, and notify listeners. */
+  /** Apply a browser patch and persist it; returns the next configuration. */
   update(patch: unknown): NotifyConfig {
     const next = mergeConfig(this.config, patch)
     this.config = next
