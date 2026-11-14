@@ -492,20 +492,6 @@ const CSS = `
   overflow-wrap: anywhere;
 }
 
-.dn-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding-top: 16px;
-}
-
-.dn-footer__actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .dn-volumeRow {
   display: flex;
   align-items: center;
@@ -563,26 +549,6 @@ const CSS = `
   font-size: 13px;
   line-height: 20px;
   color: var(--dsw-alias-label-primary);
-}
-
-.dn-kv {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 0;
-  font-size: 13px;
-  line-height: 20px;
-}
-
-.dn-kv__key {
-  color: var(--dsw-alias-label-tertiary);
-}
-
-.dn-kv__value {
-  min-width: 0;
-  color: var(--dsw-alias-label-primary);
-  text-align: right;
 }
 
 .dn-skeleton {
