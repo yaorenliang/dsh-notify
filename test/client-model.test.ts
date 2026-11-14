@@ -68,6 +68,17 @@ describe('settings model', () => {
     expect(model.getSnapshot().error).toBeNull()
   })
 
+  it('clears a success notice by itself so it cannot replay on remount', async () => {
+    vi.useFakeTimers()
+    const model = createSettingsModel()
+    await model.refresh()
+    await model.save({ bark: { group: 'ray' } })
+    expect(model.getSnapshot().notice).toBe('Saved')
+    vi.advanceTimersByTime(1700)
+    expect(model.getSnapshot().notice).toBeNull()
+    vi.useRealTimers()
+  })
+
   it('surfaces the reason a push was refused', async () => {
     testAnswer = { ok: true, channel: 'bark', result: { ok: false, reason: 'Bark answered HTTP 400' } }
     const model = createSettingsModel()

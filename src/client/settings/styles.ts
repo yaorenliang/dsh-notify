@@ -122,6 +122,11 @@ const CSS = `
   color: var(--dsw-alias-label-secondary);
 }
 
+/* The action stays at the right edge even when the line has no description. */
+.dn-statusLine > .dn-button {
+  margin-left: auto;
+}
+
 .dn-field {
   display: flex;
   flex-direction: column;

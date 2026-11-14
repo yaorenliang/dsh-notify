@@ -10,6 +10,9 @@ import type { HostState } from './api.ts'
 import { readConfig, readState, testChannel, writeConfig } from './api.ts'
 import { permission, requestPermission as askPermission, type Permission } from './notify.ts'
 
+/** How long a success line stays on screen. */
+const NOTICE_MS = 1600
+
 /** Everything the page renders from. */
 export interface SettingsSnapshot {
   /** The stored configuration, or null while the first read is in flight. */
@@ -59,6 +62,27 @@ export function createSettingsModel(): SettingsModel {
     set({ busy: false, error: error instanceof Error ? error.message : String(error), notice: null })
   }
 
+  /**
+   * Show a success line for a moment.
+   *
+   * The store owns the lifetime, not the page: a notice that outlived the save
+   * that produced it reappears every time the section remounts, which reads as
+   * "it saved again" when nothing happened.
+   */
+  let noticeTimer: ReturnType<typeof setTimeout> | undefined
+  const announce = (notice: string | null): void => {
+    if (noticeTimer !== undefined) clearTimeout(noticeTimer)
+    if (notice === null) {
+      set({ notice: null })
+      return
+    }
+    set({ notice })
+    noticeTimer = setTimeout(() => {
+      noticeTimer = undefined
+      set({ notice: null })
+    }, NOTICE_MS)
+  }
+
   return {
     getSnapshot: () => snapshot,
     subscribe: (listener) => {
@@ -79,7 +103,8 @@ export function createSettingsModel(): SettingsModel {
       try {
         const config = await writeConfig(patch)
         const state = await readState()
-        set({ config, state, busy: false, notice: 'Saved' })
+        set({ config, state, busy: false })
+        announce('Saved')
       } catch (error) {
         fail(error)
       }
@@ -94,9 +119,9 @@ export function createSettingsModel(): SettingsModel {
         const accepted = result.ok && !refused
         set({
           busy: false,
-          notice: accepted ? `Test sent on ${channel}` : null,
           error: accepted ? null : result.result?.reason ?? `No ${channel} channel is ready`,
         })
+        announce(accepted ? `Test sent on ${channel}` : null)
       } catch (error) {
         fail(error)
       }

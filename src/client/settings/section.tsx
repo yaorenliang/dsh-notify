@@ -100,24 +100,12 @@ export function NotificationsSection({ model }: NotificationsSectionProps): Reac
   const [drafts, setDrafts] = useState<Drafts>({})
   const [volumeDraft, setVolumeDraft] = useState<number | null>(null)
   const lastChannels = useRef<{ browser: boolean; bark: boolean }>({ browser: false, bark: false })
-  const [visibleNotice, setVisibleNotice] = useState<string | null>(null)
 
   useEffect(() => {
     injectStyles()
   }, [])
 
-  useEffect(() => {
-    if (snapshot.notice === null) {
-      setVisibleNotice(null)
-      return undefined
-    }
-    setVisibleNotice(snapshot.notice)
-    const timer = setTimeout(() => setVisibleNotice(null), 1600)
-    return () => clearTimeout(timer)
-  }, [snapshot.notice])
-
   const config = snapshot.config
-  const state = snapshot.state
   const busy = snapshot.busy
 
   // Remember what "on" looked like, so the master switch can restore it.
@@ -213,9 +201,9 @@ export function NotificationsSection({ model }: NotificationsSectionProps): Reac
         <h2 className="dn-title">{t('page.title')}</h2>
         <p className="dn-intro">{t('page.intro')}</p>
         {masterOn ? null : <p className="dn-readonly">{t('empty.noChannel')}</p>}
-        {visibleNotice === null ? null : (
+        {snapshot.notice === null ? null : (
           <p className="dn-notice dn-notice--success" role="status">
-            {noticeText(visibleNotice)}
+            {noticeText(snapshot.notice)}
           </p>
         )}
       </header>
@@ -444,22 +432,14 @@ export function NotificationsSection({ model }: NotificationsSectionProps): Reac
           <div className="dn-stack">
             <div className="dn-statusLine">
               <StateDot state={snapshot.permission === 'granted' ? 'done' : 'idle'} />
-              <span className="dn-rowText">
-                <span className="dn-rowTitle">{t('status.browserChannel')}</span>
-                <span className="dn-rowDesc">{permissionLabel(snapshot.permission)}</span>
-              </span>
+              <span className="dn-rowTitle">{t('status.browserChannel')}</span>
               <Button disabled={browserBlocked} title={browserBlocked ? t('status.testBrowserBlocked') : undefined} onClick={() => void model.test('browser')}>
                 {t('status.testBrowser')}
               </Button>
             </div>
             <div className="dn-statusLine">
               <StateDot state={config.bark.deviceKey.configured && config.bark.enabled ? 'done' : 'idle'} />
-              <span className="dn-rowText">
-                <span className="dn-rowTitle">{t('status.barkChannel')}</span>
-                <span className="dn-rowDesc">
-                  {config.bark.deviceKey.configured ? t('status.ready') : t('status.notReady')} · {t('status.browsers')} {state?.browsers ?? t('status.unknown')}
-                </span>
-              </span>
+              <span className="dn-rowTitle">{t('status.barkChannel')}</span>
               <Button disabled={pushBlocked} title={pushBlocked ? t('status.testPushBlocked') : undefined} onClick={() => void model.test('bark')}>
                 {t('status.testPush')}
               </Button>
