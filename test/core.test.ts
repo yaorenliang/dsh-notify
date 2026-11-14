@@ -13,7 +13,7 @@ function event(over: Partial<NotificationEvent> = {}): NotificationEvent {
 
 describe('classifyTurnEnd', () => {
   it('stays silent when the reason is missing', () => {
-    expect(classifyTurnEnd(null)).toEqual({ kind: 'silent', why: 'unknown' })
+    expect(classifyTurnEnd(null)).toEqual({ kind: 'silent' })
   })
 
   it('keeps a completed kind', () => {
@@ -35,10 +35,10 @@ describe('classifyTurnEnd', () => {
   })
 
   it('stays silent for endings nobody asked to be told about', () => {
-    expect(classifyTurnEnd({ kind: 'max-tokens' })).toEqual({ kind: 'silent', why: 'max-tokens' })
-    expect(classifyTurnEnd({ kind: 'blocked' })).toEqual({ kind: 'silent', why: 'blocked' })
-    expect(classifyTurnEnd({ kind: 'forked' })).toEqual({ kind: 'silent', why: 'forked' })
-    expect(classifyTurnEnd({ kind: 'something-new' })).toEqual({ kind: 'silent', why: 'unknown' })
+    expect(classifyTurnEnd({ kind: 'max-tokens' })).toEqual({ kind: 'silent' })
+    expect(classifyTurnEnd({ kind: 'blocked' })).toEqual({ kind: 'silent' })
+    expect(classifyTurnEnd({ kind: 'forked' })).toEqual({ kind: 'silent' })
+    expect(classifyTurnEnd({ kind: 'something-new' })).toEqual({ kind: 'silent' })
   })
 })
 

@@ -48,7 +48,7 @@ export type TurnOutcome =
   | { readonly kind: 'failed'; readonly code: string | null; readonly message: string }
   | { readonly kind: 'interrupted'; readonly reason: TurnEndReasonLike }
   /** The turn ended in a way that is not worth interrupting anyone for. */
-  | { readonly kind: 'silent'; readonly why: 'blocked' | 'max-tokens' | 'forked' | 'unknown' }
+  | { readonly kind: 'silent' }
 
 /**
  * Classify a finished turn.
@@ -61,7 +61,7 @@ export function classifyTurnEnd(reason: TurnEndReasonLike | null | undefined): T
   // Only a reason the plugin actually understands becomes a notification: an
   // unknown ending must stay silent rather than claim the agent answered.
   if (reason === null || reason === undefined || typeof reason.kind !== 'string') {
-    return { kind: 'silent', why: 'unknown' }
+    return { kind: 'silent' }
   }
   switch (reason.kind) {
     case 'completed':
@@ -74,12 +74,9 @@ export function classifyTurnEnd(reason: TurnEndReasonLike | null | undefined): T
     case 'aborted':
     case 'interrupted':
       return { kind: 'interrupted', reason }
-    case 'blocked':
-    case 'max-tokens':
-    case 'forked':
-      return { kind: 'silent', why: reason.kind }
     default:
-      return { kind: 'silent', why: 'unknown' }
+      // blocked, max-tokens, forked, and anything newer: never claim the agent answered.
+      return { kind: 'silent' }
   }
 }
 
