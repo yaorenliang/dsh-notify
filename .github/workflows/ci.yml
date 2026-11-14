@@ -27,4 +27,4 @@ jobs:
       - name: Packed artifact installs
         run: |
           pnpm pack --pack-destination /tmp
-          ls -l /tmp/dsh-notify-*.tgz
+          ls -l /tmp/*dsh-notify-*.tgz
