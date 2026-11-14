@@ -8,10 +8,8 @@
 import type { BroadcastEvent } from './api.ts'
 
 /** Open the notification stream; the returned function closes it. */
-export function subscribeNotifications(onEvent: (event: BroadcastEvent) => void, onConnect?: (connected: boolean) => void): () => void {
+export function subscribeNotifications(onEvent: (event: BroadcastEvent) => void): () => void {
   const source = new EventSource('/api/dsh-notify/stream')
-  source.addEventListener('open', () => onConnect?.(true))
-  source.addEventListener('error', () => onConnect?.(false))
   source.addEventListener('notification', (message) => {
     const payload = (message as MessageEvent<string>).data
     try {
