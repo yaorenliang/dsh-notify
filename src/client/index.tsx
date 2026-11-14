@@ -6,7 +6,7 @@
  */
 import type { Context } from '@deepseek-ai/cordis'
 import type { PublicConfig } from '../core/config.ts'
-import { readConfig, reportPresence } from './api.ts'
+import { reportPresence } from './api.ts'
 import { createSettingsModel } from './model.ts'
 import { play, show } from './notify.ts'
 import { subscribeNotifications } from './stream.ts'
@@ -36,18 +36,14 @@ export function apply(ctx: Context): void {
   const model = createSettingsModel()
   void model.refresh()
 
-  let live: PublicConfig | null = null
-  model.subscribe(() => {
-    const snapshot = model.getSnapshot()
-    if (snapshot.config !== null) live = snapshot.config
-  })
-
   services.effect(() => subscribeNotifications((event) => {
     void handle(event)
   }), 'dsh-notify: stream')
 
   async function handle(event: { id: string; kind: keyof PublicConfig['events']; title: string; body: string; sessionId: string }): Promise<void> {
-    const config = live ?? await readConfig().catch(() => null)
+    // One source of truth: the settings model already owns the configuration.
+    if (model.getSnapshot().config === null) await model.refresh()
+    const config = model.getSnapshot().config
     if (config === null || !config.browser.enabled) return
     if (alreadyShown(event.id)) return
     const kind = config.events[event.kind]
