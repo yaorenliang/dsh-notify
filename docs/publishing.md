@@ -28,6 +28,10 @@ The tarball carries no configuration and no secret: the device key lives in the
 profile directory, created at runtime, and `prepublishOnly` runs `pnpm verify`
 again on any local publish.
 
+The package-level publishing access is set to "require two-factor authentication
+and disallow bypass-2FA tokens", so a stolen token cannot publish this package
+even if npm still honoured one.
+
 ### Why this and not a token
 
 npm requires a second factor for publishing. Three paths exist:
