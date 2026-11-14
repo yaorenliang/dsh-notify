@@ -11,6 +11,8 @@ import { createSettingsModel } from './model.ts'
 import { play, show } from './notify.ts'
 import { subscribeNotifications } from './stream.ts'
 import { NotificationsSection } from './settings/section.tsx'
+import { BellIcon } from './section-icon.tsx'
+import { t } from './i18n.ts'
 
 export const name = 'dsh-notify-client'
 export const inject = ['slots', 'uiWorkspace']
@@ -90,9 +92,15 @@ export function apply(ctx: Context): void {
     name: 'settings.section',
     id: 'dsh-notify',
     order: 41,
-    label: () => sectionLabel(),
+    label: () => t('nav'),
     inject: () => ({ model }),
   }, NotificationsSection))
+
+  services.slots.inject('settings.section.icon', () => services.slots.register({
+    name: 'settings.section.icon',
+    id: 'dsh-notify',
+    order: 41,
+  }, BellIcon))
 }
 
 /**
@@ -171,7 +179,3 @@ function tabId(): string {
   }
 }
 
-/** The navigation label, in the reader's language. */
-function sectionLabel(): string {
-  return navigator.language.toLowerCase().startsWith('zh') ? '通知' : 'Notifications'
-}

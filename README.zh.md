@@ -24,7 +24,7 @@
 dsh plugin --profile web add @yaorenliang/dsh-notify
 ```
 
-打开 **设置 → 通知**，填入 Bark device key，打开需要的通道，分别点一次「测试」。
+打开 **设置 → 会话通知**，填入 Bark device key，打开需要的通道，分别点一次「测试」。
 
 从本地目录安装：
 

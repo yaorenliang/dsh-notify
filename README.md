@@ -24,7 +24,7 @@ Most setups end up with two plugins — one that shows browser notifications and
 dsh plugin --profile web add @yaorenliang/dsh-notify
 ```
 
-Then reload the page and open **Settings → Notifications**, paste your Bark device key, enable the channels you want, and press **Test** on each. The profile hot-applies the bundle, so no restart is required.
+Then reload the page and open **Settings → Session alerts**, paste your Bark device key, enable the channels you want, and press **Test** on each. The profile hot-applies the bundle, so no restart is required.
 
 From a local checkout:
 

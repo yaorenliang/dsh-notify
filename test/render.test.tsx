@@ -43,7 +43,7 @@ const render = (model: SettingsModel): string => renderToStaticMarkup(<Notificat
 describe('settings page', () => {
   it('renders the whole page without throwing', () => {
     const html = render(stillModel(snapshot(withChannels())))
-    expect(html).toContain('Notifications')
+    expect(html).toContain('Session alerts')
     expect(html).toContain('Reminders')
   })
 

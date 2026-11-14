@@ -11,8 +11,8 @@ export type Locale = 'zh' | 'en'
 
 /** Chinese is the source language; every other locale must cover its keys. */
 const ZH = {
-  'nav': '通知',
-  'page.title': '通知',
+  'nav': '会话通知',
+  'page.title': '会话通知',
   'page.intro': '会话结束、需要你回答或等待授权时提醒你；可以只在本机响，也可以推到手机。',
   'page.loading': '正在读取设置…',
   'page.loadFailed': '宿主暂时不可达，无法读取设置。',
@@ -113,8 +113,8 @@ export type MessageKey = keyof typeof ZH
 
 /** English copy; type-checked against every Chinese key. */
 const EN: Record<MessageKey, string> = {
-  'nav': 'Notifications',
-  'page.title': 'Notifications',
+  'nav': 'Session alerts',
+  'page.title': 'Session alerts',
   'page.intro': 'Get reminded when a session ends, needs an answer, or waits for approval — on this machine, on your phone, or both.',
   'page.loading': 'Loading settings…',
   'page.loadFailed': 'The host is unreachable, so the settings cannot be read.',
