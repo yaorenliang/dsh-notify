@@ -66,10 +66,16 @@ export class ConfigStore {
   }
 }
 
-/** Write through a temp sibling so readers never observe a partial document. */
+/**
+ * Write through a temp sibling so readers never observe a partial document.
+ *
+ * The document holds a Bark device key, so it is created owner-only: a fresh
+ * temp file gets 0600 before the rename, which also repairs a file that an
+ * earlier version left world-readable.
+ */
 function atomicWrite(path: string, text: string): void {
   mkdirSync(dirname(path), { recursive: true })
   const temp = join(dirname(path), `.${Date.now()}-${process.pid}.tmp`)
-  writeFileSync(temp, text, 'utf8')
+  writeFileSync(temp, text, { encoding: 'utf8', mode: 0o600 })
   renameSync(temp, path)
 }
