@@ -1,6 +1,12 @@
 import { build } from 'esbuild'
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { mkdir, rm } from 'node:fs/promises'
+
+// The client module id must be the package name: the Host looks a client plugin
+// up by the name it is installed under, so a bundle that registers anything else
+// mounts nothing — no error, just a missing settings section.
+const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 
 const out = 'lib'
 await rm(out, { recursive: true, force: true })
@@ -34,6 +40,6 @@ await build({
   target: 'es2022',
   jsx: 'automatic',
   external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', '@deepseek-ai/*'],
-  banner: { js: 'window.__ModuleLoader__.load({\n\tid: "dsh-notify",\n\tfactory: (require) => {\n\t\tvar module = { exports: {} };\n\t\tvar exports = module.exports;' },
+  banner: { js: `window.__ModuleLoader__.load({\n\tid: ${JSON.stringify(pkg.name)},\n\tfactory: (require) => {\n\t\tvar module = { exports: {} };\n\t\tvar exports = module.exports;` },
   footer: { js: '\t\treturn module.exports;\n\t}\n});' },
 })

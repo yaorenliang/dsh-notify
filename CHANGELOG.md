@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.5 — 2026-11-14
+
+Fixes the settings section going missing after installing from the registry: the
+browser bundle registered itself as `dsh-notify` while the package is
+`@yaorenliang/dsh-notify`, and the Host looks a client plugin up by package name.
+A local `link:` install matched by accident; a registry install never did, so the
+page, the sounds and the notifications were all silently absent.
+
+The bundle id is now read from `package.json` instead of being written by hand.
+
 ## 0.1.4 — 2026-11-14
 
 A fresh install now says what the browser has not decided yet, and offers the one
