@@ -10,7 +10,8 @@
 /** The id the injected stylesheet is addressed by. */
 export const STYLE_ID = 'dsh-notify-styles'
 
-const CSS = `
+/** Page frame, header and the shared type scale. */
+const PAGE = `
 .dn-section {
   display: flex;
   flex-direction: column;
@@ -49,7 +50,10 @@ const CSS = `
   color: var(--dsw-alias-label-tertiary);
 }
 
-/* A block is one heading plus its rows; the 32px page gap separates blocks. */
+`
+
+/** Cards, fields, inputs, buttons and the controls that sit in them. */
+const CONTROLS = `/* A block is one heading plus its rows; the 32px page gap separates blocks. */
 .dn-block {
   display: flex;
   flex-direction: column;
@@ -547,7 +551,10 @@ const CSS = `
   width: 40%;
 }
 
-/* Below the shell's narrow breakpoint the sound grid stacks into pairs. */
+`
+
+/** The channel rows, the sound grid, and their narrow-screen fallback. */
+const CHANNELS = `/* Below the shell's narrow breakpoint the sound grid stacks into pairs. */
 @media (max-width: 560px) {
   .dn-sound__head {
     display: none;
@@ -596,7 +603,10 @@ const CSS = `
   background: var(--dsw-alias-border-l2);
 }
 
-/* The quieting rules belong to the master switch, so they sit inside it. */
+`
+
+/** The master quieting rules and the foot of the page. */
+const FOOTER = `/* The quieting rules belong to the master switch, so they sit inside it. */
 .dn-indent {
   display: flex;
   flex-direction: column;
@@ -641,7 +651,10 @@ const CSS = `
 .dn-invite__out {
   opacity: 0.7;
 }
-`;
+`
+
+/** One stylesheet, assembled in cascade order. */
+const CSS = PAGE + CONTROLS + CHANNELS + FOOTER
 
 /**
  * Inject the stylesheet once.
