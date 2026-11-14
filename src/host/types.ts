@@ -30,8 +30,6 @@ export interface DshHost {
    * declare in `inject`, so every optional service is read through this method.
    */
   get(name: string): unknown
-  /** Folded session titles, when the composition provides the service. */
-  readonly sessionTitle?: { get(session: unknown): { title?: string | null } | undefined }
   /** Connection: authenticated HTTP carrier. */
   readonly connection: { readonly fetch: { register(route: FetchRoute): () => Promise<void> } }
 }
