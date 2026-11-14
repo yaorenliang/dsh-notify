@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2 — 2026-11-14
+
+The settings section is called 会话通知 / Session alerts and carries its own bell,
+drawn on the same grid and stroke as the built-in icons instead of falling back to
+the generic gear.
+
 ## 0.1.1 — 2026-11-14
 
 Releases now go out from GitHub Actions through trusted publishing: the npm side
