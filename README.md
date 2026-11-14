@@ -4,6 +4,8 @@
 
 [中文](./README.zh.md) | English
 
+<sub>★ <a href="https://github.com/yaorenliang/dsh-notify">Star the repo</a> if this saved you a plugin — that is how the next person finds it.</sub>
+
 One notification plugin for [DeepSeek Harness](https://github.com/deepseek-ai/dsh): **browser system notifications and Bark push, decided once**.
 
 Most setups end up with two plugins — one that shows browser notifications and one that pushes to a phone. They classify events independently, so they drift: the phone reports "turn 12 ended" while the browser reports "finished", an approval arrives twice, and a subagent's chatter leaks into both. `dsh-notify` classifies once on the Host, then fans the same event out to every channel.

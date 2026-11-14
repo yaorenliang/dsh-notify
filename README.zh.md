@@ -4,6 +4,8 @@
 
 中文 | [English](./README.md)
 
+<sub>★ 觉得好用的话，<a href="https://github.com/yaorenliang/dsh-notify">点个 Star</a> —— 能让下一个需要它的人看见。</sub>
+
 给 [DeepSeek Harness](https://github.com/deepseek-ai/dsh) 用的一体化通知插件：**浏览器系统通知与 Bark 手机推送，同一份判定**。
 
 常见做法是装两个插件——一个弹浏览器通知，一个推手机。它们各自判定事件，于是必然漂移：手机说"第 12 轮结束"，浏览器说"完成"，一次授权来两条，子 agent 的动静两边都漏。`dsh-notify` 在宿主侧只判定一次，再把同一个事件分发给两条通道。

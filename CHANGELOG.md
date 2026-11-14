@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3 — 2026-11-14
+
+The page ends with one quiet line: a star ask and a link to this repository,
+after every control rather than in front of them. The READMEs carry the same
+line, where someone deciding whether to keep the plugin actually reads it.
+
 ## 0.1.2 — 2026-11-14
 
 The settings section is called 会话通知 / Session alerts and carries its own bell,
