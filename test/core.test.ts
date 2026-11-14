@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { classifyTurnEnd, truncate } from '../src/core/events.ts'
 import { approvalBody, completedBody, failedBody, interruptedBody, resolveLocale } from '../src/core/render.ts'
 import { DEFAULT_CONFIG, mergeConfig, maskSecret, publicConfig, resolveConfig } from '../src/core/config.ts'
-import { DEFAULT_POLICY, collapseKey, decideDelivery } from '../src/core/policy.ts'
+import { PRESENCE_TTL_MS, collapseKey, decideDelivery, type DeliveryPolicy } from '../src/core/policy.ts'
 import type { NotificationEvent } from '../src/core/events.ts'
 
 const at = 1_700_000_000_000
+
+/** The quiet defaults a real composition starts from. */
+const QUIET: DeliveryPolicy = { currentSessionMode: 'hidden', notifySubagents: false, presenceTtlMs: PRESENCE_TTL_MS }
 
 function event(over: Partial<NotificationEvent> = {}): NotificationEvent {
   return { id: 'e1', kind: 'completed', sessionId: 's1', sessionTitle: 'Fix the build', body: 'Done', at, ...over }
@@ -101,42 +104,42 @@ describe('decideDelivery', () => {
   const main = { subagent: false }
 
   it('silences a subagent session by default', () => {
-    expect(decideDelivery(event(), { subagent: true }, null)).toEqual({ deliver: false, suppression: 'subagent' })
+    expect(decideDelivery(event(), { subagent: true }, null, QUIET)).toEqual({ deliver: false, suppression: 'subagent' })
   })
 
   it('lets a subagent through when the policy allows it', () => {
-    expect(decideDelivery(event(), { subagent: true }, null, { ...DEFAULT_POLICY, notifySubagents: true }).deliver).toBe(true)
+    expect(decideDelivery(event(), { subagent: true }, null, { ...QUIET, notifySubagents: true }).deliver).toBe(true)
   })
 
   it('stays quiet while the same session is visible and focused', () => {
     const presence = { visible: true, focused: true, sessionId: 's1', at }
-    expect(decideDelivery(event(), main, presence, DEFAULT_POLICY, at + 1000)).toEqual({ deliver: false, suppression: 'current-session' })
+    expect(decideDelivery(event(), main, presence, QUIET, at + 1000)).toEqual({ deliver: false, suppression: 'current-session' })
   })
 
   it('alerts a hidden tab for the same session', () => {
     const presence = { visible: false, focused: false, sessionId: 's1', at }
-    expect(decideDelivery(event(), main, presence, DEFAULT_POLICY, at + 1000).deliver).toBe(true)
+    expect(decideDelivery(event(), main, presence, QUIET, at + 1000).deliver).toBe(true)
   })
 
   it('widens to unfocused tabs in the unfocused mode', () => {
     const presence = { visible: true, focused: false, sessionId: 's1', at }
-    const policy = { ...DEFAULT_POLICY, currentSessionMode: 'unfocused' as const }
+    const policy: DeliveryPolicy = { ...QUIET, currentSessionMode: 'unfocused' }
     expect(decideDelivery(event(), main, presence, policy, at + 1000).deliver).toBe(true)
   })
 
   it('ignores a stale presence report and delivers', () => {
     const presence = { visible: true, focused: true, sessionId: 's1', at }
-    expect(decideDelivery(event(), main, presence, DEFAULT_POLICY, at + DEFAULT_POLICY.presenceTtlMs + 1).deliver).toBe(true)
+    expect(decideDelivery(event(), main, presence, QUIET, at + PRESENCE_TTL_MS + 1).deliver).toBe(true)
   })
 
   it('delivers for another session regardless of focus', () => {
     const presence = { visible: true, focused: true, sessionId: 's2', at }
-    expect(decideDelivery(event(), main, presence, DEFAULT_POLICY, at + 1000).deliver).toBe(true)
+    expect(decideDelivery(event(), main, presence, QUIET, at + 1000).deliver).toBe(true)
   })
 
   it('always delivers in the always mode', () => {
     const presence = { visible: true, focused: true, sessionId: 's1', at }
-    const policy = { ...DEFAULT_POLICY, currentSessionMode: 'always' as const }
+    const policy: DeliveryPolicy = { ...QUIET, currentSessionMode: 'always' }
     expect(decideDelivery(event(), main, presence, policy, at + 1000).deliver).toBe(true)
   })
 })

@@ -7,7 +7,7 @@
  */
 import type { NotificationEvent } from '../core/events.ts'
 import { barkReady, type NotifyConfig } from '../core/config.ts'
-import { DEFAULT_POLICY, collapseKey, decideDelivery, type DeliveryPolicy, type PolicyFacts, type Presence } from '../core/policy.ts'
+import { PRESENCE_TTL_MS, collapseKey, decideDelivery, type DeliveryPolicy, type PolicyFacts, type Presence } from '../core/policy.ts'
 import { composeTitle } from './title.ts'
 import type { BarkResult } from './bark.ts'
 
@@ -71,9 +71,9 @@ export class Dispatcher {
 
     const config = this.ports.config()
     const policy: DeliveryPolicy = {
-      ...DEFAULT_POLICY,
       currentSessionMode: config.browser.currentSessionMode,
       notifySubagents: config.notifySubagents,
+      presenceTtlMs: PRESENCE_TTL_MS,
     }
     const decision = decideDelivery(event, facts, this.ports.presence(), policy, now)
     if (!decision.deliver) {

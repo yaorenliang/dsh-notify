@@ -38,12 +38,8 @@ export interface DeliveryPolicy {
   readonly presenceTtlMs: number
 }
 
-/** Defaults that keep a person at the keyboard undisturbed. */
-export const DEFAULT_POLICY: DeliveryPolicy = Object.freeze({
-  currentSessionMode: 'hidden',
-  notifySubagents: false,
-  presenceTtlMs: 45_000,
-})
+/** How long a browser's presence report stays authoritative. */
+export const PRESENCE_TTL_MS = 45_000
 
 /** Why an event was not delivered; kept for logs and settings diagnostics. */
 export type Suppression = 'subagent' | 'current-session'
@@ -68,7 +64,7 @@ export function decideDelivery(
   event: NotificationEvent,
   facts: PolicyFacts,
   presence: Presence | null,
-  policy: DeliveryPolicy = DEFAULT_POLICY,
+  policy: DeliveryPolicy,
   now: number = Date.now(),
 ): DeliveryDecision {
   if (facts.subagent && !policy.notifySubagents) {
