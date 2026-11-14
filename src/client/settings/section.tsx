@@ -97,7 +97,6 @@ const MODE_OPTIONS = MODES.map((mode) => ({ value: mode.value, label: t(mode.lab
  */
 export function NotificationsSection({ model }: NotificationsSectionProps): ReactNode {
   const snapshot = useSyncExternalStore(model.subscribe, model.getSnapshot, model.getSnapshot)
-  const lastChannels = useRef<{ browser: boolean; bark: boolean }>({ browser: false, bark: false })
 
   useEffect(() => {
     injectStyles()
@@ -106,124 +105,147 @@ export function NotificationsSection({ model }: NotificationsSectionProps): Reac
   const config = snapshot.config
   const busy = snapshot.busy
 
-  // Remember what "on" looked like, so the master switch can restore it.
-  useEffect(() => {
-    if (config === null) return
-    if (config.browser.enabled || config.bark.enabled) {
-      lastChannels.current = { browser: config.browser.enabled, bark: config.bark.enabled }
-    }
-  }, [config])
-
   if (config === null) {
-    return (
-      <div className="dn-section">
-        <header className="dn-header">
-          <h2 className="dn-title">{t('page.title')}</h2>
-          <p className="dn-intro">{busy ? t('page.loading') : t('page.loadFailed')}</p>
-        </header>
-        {snapshot.error === null ? null : <ErrorBar text={snapshot.error} onRetry={() => void model.refresh()} />}
-        <div className="dn-skeleton" aria-hidden="true">
-          <div className="dn-skeleton__line dn-skeleton__line--short" />
-          <div className="dn-skeleton__line" />
-          <div className="dn-skeleton__line" />
-        </div>
-      </div>
-    )
+    return <LoadingPage busy={busy} error={snapshot.error} onRetry={() => void model.refresh()} />
   }
 
   const save = (patch: unknown): void => void model.save(patch)
   const masterOn = config.browser.enabled || config.bark.enabled
   const disabled = busy || !masterOn
 
-  const onMasterChange = (next: boolean): void => {
+  return (
+    <div className="dn-section">
+      <PageHeading
+        masterOn={masterOn}
+        notice={snapshot.notice}
+        error={snapshot.error}
+        onRetry={() => void model.refresh()}
+      />
+
+      <MasterRules
+        config={config}
+        permission={snapshot.permission}
+        busy={busy}
+        masterOn={masterOn}
+        disabled={disabled}
+        onSave={save}
+        onRequestPermission={() => void model.requestPermission()}
+      />
+
+      <ChannelCards
+        config={config}
+        permission={snapshot.permission}
+        busy={busy}
+        onSave={save}
+        onCommit={commitPatch(model)}
+        onRequestPermission={() => void model.requestPermission()}
+      />
+
+      <DetailBlocks
+        config={config}
+        permission={snapshot.permission}
+        busy={busy}
+        disabled={disabled}
+        onSave={save}
+        onTest={(channel) => void model.test(channel)}
+      />
+
+      <RepositoryInvite />
+    </div>
+  )
+}
+
+/** The title, the ready notice, and the failure bar. */
+function PageHeading(props: {
+  readonly masterOn: boolean
+  readonly notice: string | null
+  readonly error: string | null
+  readonly onRetry: () => void
+}): ReactNode {
+  return (
+    <>
+      <header className="dn-header">
+        <h2 className="dn-title">{t('page.title')}</h2>
+        <p className="dn-intro">{t('page.intro')}</p>
+        {props.masterOn ? null : <p className="dn-readonly">{t('empty.noChannel')}</p>}
+        {props.notice === null ? null : (
+          <p className="dn-notice dn-notice--success" role="status">
+            {noticeText(props.notice)}
+          </p>
+        )}
+      </header>
+
+      {props.error === null ? null : <ErrorBar text={props.error} onRetry={props.onRetry} />}
+    </>
+  )
+}
+
+/** The page before its first configuration arrives. */
+function LoadingPage(props: { readonly busy: boolean; readonly error: string | null; readonly onRetry: () => void }): ReactNode {
+  return (
+    <div className="dn-section">
+      <header className="dn-header">
+        <h2 className="dn-title">{t('page.title')}</h2>
+        <p className="dn-intro">{props.busy ? t('page.loading') : t('page.loadFailed')}</p>
+      </header>
+      {props.error === null ? null : <ErrorBar text={props.error} onRetry={props.onRetry} />}
+      <div className="dn-skeleton" aria-hidden="true">
+        <div className="dn-skeleton__line dn-skeleton__line--short" />
+        <div className="dn-skeleton__line" />
+        <div className="dn-skeleton__line" />
+      </div>
+    </div>
+  )
+}
+
+/** The master switch and the two quieting rules it owns. */
+function MasterRules(props: {
+  readonly config: PublicConfig
+  readonly permission: Permission
+  readonly busy: boolean
+  readonly masterOn: boolean
+  readonly disabled: boolean
+  readonly onSave: (patch: unknown) => void
+  readonly onRequestPermission: () => void
+}): ReactNode {
+  const { config, permission, busy, masterOn, disabled, onSave, onRequestPermission } = props
+  const lastChannels = useRef<{ browser: boolean; bark: boolean }>({ browser: false, bark: false })
+
+  // Remember what "on" looked like, so the master switch can restore it.
+  useEffect(() => {
+    if (config.browser.enabled || config.bark.enabled) {
+      lastChannels.current = { browser: config.browser.enabled, bark: config.bark.enabled }
+    }
+  }, [config])
+
+  const onChange = (next: boolean): void => {
     if (next) {
       const remembered = lastChannels.current
       // Restoring a browser channel needs the same gesture-bound prompt as its switch.
-      if (remembered.browser && snapshot.permission === 'default') void model.requestPermission()
-      save({
+      if (remembered.browser && permission === 'default') onRequestPermission()
+      onSave({
         browser: { enabled: remembered.browser },
         bark: { enabled: remembered.bark && config.bark.deviceKey.configured },
       })
       return
     }
     lastChannels.current = { browser: config.browser.enabled, bark: config.bark.enabled }
-    save({ browser: { enabled: false }, bark: { enabled: false } })
+    onSave({ browser: { enabled: false }, bark: { enabled: false } })
   }
 
   return (
-    <div className="dn-section">
-      <header className="dn-header">
-        <h2 className="dn-title">{t('page.title')}</h2>
-        <p className="dn-intro">{t('page.intro')}</p>
-        {masterOn ? null : <p className="dn-readonly">{t('empty.noChannel')}</p>}
-        {snapshot.notice === null ? null : (
-          <p className="dn-notice dn-notice--success" role="status">
-            {noticeText(snapshot.notice)}
-          </p>
-        )}
-      </header>
-
-      {snapshot.error === null ? null : <ErrorBar text={snapshot.error} onRetry={() => void model.refresh()} />}
-
-      <section className="dn-block">
-        <div className="dn-card">
-          <SwitchRow
-            title={t('master.switch')}
-            description={t('master.desc')}
-            checked={masterOn}
-            disabled={busy}
-            onChange={onMasterChange}
-          />
-          <div className="dn-indent">
-            <Field label={t('browser.timing')} hint={t('browser.timingHint')}>
-              <Segmented<CurrentSessionMode>
-                label={t('browser.timing')}
-                value={config.browser.currentSessionMode}
-                options={MODE_OPTIONS}
-                disabled={disabled}
-                onChange={(mode) => save({ browser: { currentSessionMode: mode } })}
-              />
-            </Field>
-            <SwitchRow
-              title={t('subagent.switch')}
-              description={t('subagent.hint')}
-              checked={config.notifySubagents}
-              disabled={disabled}
-              onChange={(next) => save({ notifySubagents: next })}
-            />
-          </div>
-        </div>
-      </section>
-
-      <Block title={t('channel.title')}>
-        <div className="dn-card">
-          <BrowserChannel
-            config={config}
-            permission={snapshot.permission}
-            busy={busy}
-            onSave={save}
-            onRequestPermission={() => void model.requestPermission()}
-          />
-          <div className="dn-channelSep" />
-          <BarkChannel config={config} busy={busy} onSave={save} onCommit={commitPatch(model)} />
-        </div>
-      </Block>
-
-      <Block title={t('events.title')}>
-        <EventSoundTable config={config} disabled={disabled} onSave={save} />
-      </Block>
-
-      <Block title={t('status.title')}>
-        <ChannelStatus
-          config={config}
-          permission={snapshot.permission}
-          busy={busy}
-          onTest={(channel) => void model.test(channel)}
+    <section className="dn-block">
+      <div className="dn-card">
+        <SwitchRow
+          title={t('master.switch')}
+          description={t('master.desc')}
+          checked={masterOn}
+          disabled={busy}
+          onChange={onChange}
         />
-      </Block>
-
-      <RepositoryInvite />
-    </div>
+        <QuietRules config={config} disabled={disabled} onSave={onSave} />
+      </div>
+    </section>
   )
 }
 
@@ -235,6 +257,138 @@ function commitPatch(model: SettingsModel): (patch: unknown) => Promise<boolean>
   }
 }
 
+/** The event-sound table and the two channel tests, in page order. */
+function DetailBlocks(props: {
+  readonly config: PublicConfig
+  readonly permission: Permission
+  readonly busy: boolean
+  readonly disabled: boolean
+  readonly onSave: (patch: unknown) => void
+  readonly onTest: (channel: 'browser' | 'bark') => void
+}): ReactNode {
+  return (
+    <>
+      <Block title={t('events.title')}>
+        <EventSoundTable config={props.config} disabled={props.disabled} onSave={props.onSave} />
+      </Block>
+
+      <Block title={t('status.title')}>
+        <ChannelStatus
+          config={props.config}
+          permission={props.permission}
+          busy={props.busy}
+          onTest={props.onTest}
+        />
+      </Block>
+    </>
+  )
+}
+
+/** Both channels in one card, with the hairline the shell uses between rows. */
+function ChannelCards(props: {
+  readonly config: PublicConfig
+  readonly permission: Permission
+  readonly busy: boolean
+  readonly onSave: (patch: unknown) => void
+  readonly onCommit: (patch: unknown) => Promise<boolean>
+  readonly onRequestPermission: () => void
+}): ReactNode {
+  const { config, permission, busy, onSave, onCommit, onRequestPermission } = props
+
+  return (
+    <Block title={t('channel.title')}>
+      <div className="dn-card">
+        <BrowserChannel
+          config={config}
+          permission={permission}
+          busy={busy}
+          onSave={onSave}
+          onRequestPermission={onRequestPermission}
+        />
+        <div className="dn-channelSep" />
+        <BarkChannel config={config} busy={busy} onSave={onSave} onCommit={onCommit} />
+      </div>
+    </Block>
+  )
+}
+
+/** The two quieting rules that hang off the master switch. */
+function QuietRules(props: {
+  readonly config: PublicConfig
+  readonly disabled: boolean
+  readonly onSave: (patch: unknown) => void
+}): ReactNode {
+  return (
+    <div className="dn-indent">
+      <Field label={t('browser.timing')} hint={t('browser.timingHint')}>
+        <Segmented<CurrentSessionMode>
+          label={t('browser.timing')}
+          value={props.config.browser.currentSessionMode}
+          options={MODE_OPTIONS}
+          disabled={props.disabled}
+          onChange={(mode) => props.onSave({ browser: { currentSessionMode: mode } })}
+        />
+      </Field>
+      <SwitchRow
+        title={t('subagent.switch')}
+        description={t('subagent.hint')}
+        checked={props.config.notifySubagents}
+        disabled={props.disabled}
+        onChange={(next) => props.onSave({ notifySubagents: next })}
+      />
+    </div>
+  )
+}
+
+/** The patch a commit sends: only the fields a person actually touched. */
+function barkPatch(drafts: Drafts): Record<string, string> {
+  const bark: Record<string, string> = {}
+  if (drafts.serverUrl !== undefined) bark['serverUrl'] = normalizeServerUrl(drafts.serverUrl)
+  // An empty key means "keep the stored one"; erasing is the explicit button.
+  if (drafts.deviceKey !== undefined && drafts.deviceKey.trim().length > 0) bark['deviceKey'] = drafts.deviceKey.trim()
+  if (drafts.group !== undefined && drafts.group.trim().length > 0) bark['group'] = drafts.group.trim()
+  if (drafts.baseUrl !== undefined) bark['baseUrl'] = drafts.baseUrl.trim()
+  return bark
+}
+
+/** Whether any draft differs from the stored connection settings. */
+function isBarkDirty(drafts: Drafts, config: PublicConfig): boolean {
+  return (
+    (drafts.serverUrl !== undefined && normalizeServerUrl(drafts.serverUrl) !== config.bark.serverUrl) ||
+    (drafts.group !== undefined && drafts.group.trim() !== config.bark.group) ||
+    (drafts.baseUrl !== undefined && drafts.baseUrl.trim() !== config.bark.baseUrl) ||
+    (drafts.deviceKey !== undefined && drafts.deviceKey.trim().length > 0)
+  )
+}
+
+/** The connection drafts, the values they override, and the one commit that sends them. */
+function useBarkDraft(config: PublicConfig, onCommit: (patch: unknown) => Promise<boolean>): {
+  readonly drafts: Drafts
+  readonly edit: (patch: Drafts) => void
+  readonly discard: () => void
+  readonly commitConnection: () => Promise<void>
+  readonly dirty: boolean
+  readonly serverUrl: string
+  readonly baseUrl: string
+  readonly serverUrlInvalid: boolean
+  readonly baseUrlInvalid: boolean
+} {
+  const [drafts, setDrafts] = useState<Drafts>({})
+  const edit = (patch: Drafts): void => setDrafts((previous) => ({ ...previous, ...patch }))
+
+  const serverUrl = drafts.serverUrl ?? config.bark.serverUrl
+  const baseUrl = drafts.baseUrl ?? config.bark.baseUrl
+  const serverUrlInvalid = !isHttpUrl(normalizeServerUrl(serverUrl))
+  const baseUrlInvalid = baseUrl.trim().length > 0 && !isHttpUrl(baseUrl.trim())
+  const dirty = isBarkDirty(drafts, config)
+
+  const commitConnection = async (): Promise<void> => {
+    if (await onCommit({ bark: barkPatch(drafts) })) setDrafts({})
+  }
+
+  return { drafts, edit, discard: () => setDrafts({}), commitConnection, dirty, serverUrl, baseUrl, serverUrlInvalid, baseUrlInvalid }
+}
+
 /** The browser channel: its switch, permission tag, volume and denial hint. */
 function BrowserChannel(props: {
   readonly config: PublicConfig
@@ -244,14 +398,6 @@ function BrowserChannel(props: {
   readonly onRequestPermission: () => void
 }): ReactNode {
   const { config, permission, busy, onSave, onRequestPermission } = props
-  const [volumeDraft, setVolumeDraft] = useState<number | null>(null)
-  const storedVolume = Math.round(config.browser.volume * 100)
-  const volume = volumeDraft ?? storedVolume
-
-  const onVolumeCommit = (): void => {
-    if (volumeDraft === null || volumeDraft === storedVolume) return
-    onSave({ browser: { volume: volumeDraft / 100 } })
-  }
 
   const onToggle = (next: boolean): void => {
     // The permission prompt only opens inside the gesture, so ask before awaiting.
@@ -278,25 +424,7 @@ function BrowserChannel(props: {
       </div>
       {config.browser.enabled ? (
         <div className="dn-channelBody">
-          <Field label={t('sound.volume')} hint={t('sound.volumeHint')}>
-            <div className="dn-volumeRow">
-              <input
-                className="dn-range"
-                type="range"
-                min={0}
-                max={100}
-                step={1}
-                aria-label={t('sound.volume')}
-                value={volume}
-                disabled={busy}
-                onChange={(event) => setVolumeDraft(Number(event.target.value))}
-                onPointerUp={onVolumeCommit}
-                onKeyUp={onVolumeCommit}
-                onBlur={onVolumeCommit}
-              />
-              <span className="dn-volumeValue">{t('sound.volumeValue', { value: volume })}</span>
-            </div>
-          </Field>
+          <VolumeField stored={Math.round(config.browser.volume * 100)} busy={busy} onCommit={(value) => onSave({ browser: { volume: value / 100 } })} />
           {permission === 'denied' ? (
             <div className="dn-field">
               <p className="dn-hint">{t('browser.deniedHint')}</p>
@@ -309,7 +437,44 @@ function BrowserChannel(props: {
   )
 }
 
-/** The phone channel: its switch, the connection form, and the secret field. */
+/** The volume slider, committed on release instead of on every pixel. */
+function VolumeField(props: {
+  readonly stored: number
+  readonly busy: boolean
+  readonly onCommit: (value: number) => void
+}): ReactNode {
+  const [draft, setDraft] = useState<number | null>(null)
+  const value = draft ?? props.stored
+
+  const commit = (): void => {
+    if (draft === null || draft === props.stored) return
+    props.onCommit(draft)
+  }
+
+  return (
+    <Field label={t('sound.volume')} hint={t('sound.volumeHint')}>
+      <div className="dn-volumeRow">
+        <input
+          className="dn-range"
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          aria-label={t('sound.volume')}
+          value={value}
+          disabled={props.busy}
+          onChange={(event) => setDraft(Number(event.target.value))}
+          onPointerUp={commit}
+          onKeyUp={commit}
+          onBlur={commit}
+        />
+        <span className="dn-volumeValue">{t('sound.volumeValue', { value })}</span>
+      </div>
+    </Field>
+  )
+}
+
+/** The phone channel: its switch and, while it is on, the connection form. */
 function BarkChannel(props: {
   readonly config: PublicConfig
   readonly busy: boolean
@@ -317,30 +482,6 @@ function BarkChannel(props: {
   readonly onCommit: (patch: unknown) => Promise<boolean>
 }): ReactNode {
   const { config, busy, onSave, onCommit } = props
-  const [drafts, setDrafts] = useState<Drafts>({})
-
-  const edit = (patch: Drafts): void => setDrafts((previous) => ({ ...previous, ...patch }))
-
-  const serverUrl = drafts.serverUrl ?? config.bark.serverUrl
-  const group = drafts.group ?? config.bark.group
-  const baseUrl = drafts.baseUrl ?? config.bark.baseUrl
-  const serverUrlInvalid = !isHttpUrl(normalizeServerUrl(serverUrl))
-  const baseUrlInvalid = baseUrl.trim().length > 0 && !isHttpUrl(baseUrl.trim())
-  const dirty =
-    (drafts.serverUrl !== undefined && normalizeServerUrl(drafts.serverUrl) !== config.bark.serverUrl) ||
-    (drafts.group !== undefined && drafts.group.trim() !== config.bark.group) ||
-    (drafts.baseUrl !== undefined && drafts.baseUrl.trim() !== config.bark.baseUrl) ||
-    (drafts.deviceKey !== undefined && drafts.deviceKey.trim().length > 0)
-
-  const commitConnection = async (): Promise<void> => {
-    const bark: Record<string, string> = {}
-    if (drafts.serverUrl !== undefined) bark['serverUrl'] = normalizeServerUrl(drafts.serverUrl)
-    // An empty key means "keep the stored one"; erasing is the explicit button.
-    if (drafts.deviceKey !== undefined && drafts.deviceKey.trim().length > 0) bark['deviceKey'] = drafts.deviceKey.trim()
-    if (drafts.group !== undefined && drafts.group.trim().length > 0) bark['group'] = drafts.group.trim()
-    if (drafts.baseUrl !== undefined) bark['baseUrl'] = drafts.baseUrl.trim()
-    if (await onCommit({ bark })) setDrafts({})
-  }
 
   return (
     <div className="dn-channel">
@@ -362,70 +503,128 @@ function BarkChannel(props: {
         </div>
       </div>
       {config.bark.enabled ? (
-        <div className="dn-channelBody">
-          <Field label={t('bark.serverUrl')} hint={t('bark.serverUrlHint')}>
-            <input
-              className={serverUrlInvalid ? 'dn-input dn-invalid' : 'dn-input'}
-              value={serverUrl}
-              placeholder="https://api.day.app"
-              spellCheck={false}
-              onChange={(event) => edit({ serverUrl: event.target.value })}
-              onBlur={commitConnection}
-            />
-          </Field>
-          <Field label={t('bark.deviceKey')} hint={t('bark.deviceKeyHint')}>
-            <div className="dn-row">
-              <input
-                className="dn-input"
-                type="password"
-                value={drafts.deviceKey ?? ''}
-                placeholder={config.bark.deviceKey.configured ? config.bark.deviceKey.masked : t('secret.unset')}
-                spellCheck={false}
-                autoComplete="off"
-                onChange={(event) => edit({ deviceKey: event.target.value })}
-                onBlur={commitConnection}
-              />
-              {config.bark.deviceKey.configured ? (
-                <Button
-                  onClick={() => {
-                    edit({ deviceKey: undefined })
-                    onSave({ bark: { deviceKey: null } })
-                  }}
-                >
-                  {t('secret.clear')}
-                </Button>
-              ) : null}
-            </div>
-          </Field>
-          <Field label={t('bark.group')} hint={t('bark.groupHint')}>
-            <input
-              className="dn-input"
-              value={group}
-              onChange={(event) => edit({ group: event.target.value })}
-              onBlur={commitConnection}
-            />
-          </Field>
-          <Field label={t('bark.baseUrl')} hint={t('bark.baseUrlHint')}>
-            <input
-              className={baseUrlInvalid ? 'dn-input dn-invalid' : 'dn-input'}
-              value={baseUrl}
-              placeholder="http://127.0.0.1:3080"
-              spellCheck={false}
-              onChange={(event) => edit({ baseUrl: event.target.value })}
-              onBlur={commitConnection}
-            />
-          </Field>
-          <div className="dn-actions">
-            <Button variant="save" disabled={busy || !dirty || serverUrlInvalid || baseUrlInvalid} onClick={() => void commitConnection()}>
-              {busy ? t('form.saving') : t('form.save')}
+        <BarkConnectionForm config={config} busy={busy} onSave={onSave} onCommit={onCommit} />
+      ) : null}
+    </div>
+  )
+}
+
+/** The connection settings, held as drafts until the Host accepts them. */
+function BarkConnectionForm(props: {
+  readonly config: PublicConfig
+  readonly busy: boolean
+  readonly onSave: (patch: unknown) => void
+  readonly onCommit: (patch: unknown) => Promise<boolean>
+}): ReactNode {
+  const { config, busy, onSave, onCommit } = props
+  const draft = useBarkDraft(config, onCommit)
+  const { drafts, edit, commitConnection, dirty, serverUrl, baseUrl, serverUrlInvalid, baseUrlInvalid } = draft
+
+  return (
+    <div className="dn-channelBody">
+      <Field label={t('bark.serverUrl')} hint={t('bark.serverUrlHint')}>
+        <input
+          className={serverUrlInvalid ? 'dn-input dn-invalid' : 'dn-input'}
+          value={serverUrl}
+          placeholder="https://api.day.app"
+          spellCheck={false}
+          onChange={(event) => edit({ serverUrl: event.target.value })}
+          onBlur={commitConnection}
+        />
+      </Field>
+      <BarkKeyFields
+        config={config}
+        drafts={drafts}
+        onEdit={edit}
+        onSave={onSave}
+        onCommit={commitConnection}
+      />
+      <Field label={t('bark.baseUrl')} hint={t('bark.baseUrlHint')}>
+        <input
+          className={baseUrlInvalid ? 'dn-input dn-invalid' : 'dn-input'}
+          value={baseUrl}
+          placeholder="http://127.0.0.1:3080"
+          spellCheck={false}
+          onChange={(event) => edit({ baseUrl: event.target.value })}
+          onBlur={commitConnection}
+        />
+      </Field>
+      <BarkActions
+        busy={busy}
+        dirty={dirty}
+        blocked={serverUrlInvalid || baseUrlInvalid}
+        onSave={() => void commitConnection()}
+        onDiscard={draft.discard}
+      />
+    </div>
+  )
+}
+
+/** The device key (with its erase button) and the notification group. */
+function BarkKeyFields(props: {
+  readonly config: PublicConfig
+  readonly drafts: Drafts
+  readonly onEdit: (patch: Drafts) => void
+  readonly onSave: (patch: unknown) => void
+  readonly onCommit: () => Promise<void>
+}): ReactNode {
+  const { config, drafts, onEdit, onSave, onCommit } = props
+
+  return (
+    <>
+      <Field label={t('bark.deviceKey')} hint={t('bark.deviceKeyHint')}>
+        <div className="dn-row">
+          <input
+            className="dn-input"
+            type="password"
+            value={drafts.deviceKey ?? ''}
+            placeholder={config.bark.deviceKey.configured ? config.bark.deviceKey.masked : t('secret.unset')}
+            spellCheck={false}
+            autoComplete="off"
+            onChange={(event) => onEdit({ deviceKey: event.target.value })}
+            onBlur={onCommit}
+          />
+          {config.bark.deviceKey.configured ? (
+            <Button
+              onClick={() => {
+                onEdit({ deviceKey: undefined })
+                onSave({ bark: { deviceKey: null } })
+              }}
+            >
+              {t('secret.clear')}
             </Button>
-            {dirty ? (
-              <Button variant="ghost" disabled={busy} onClick={() => setDrafts({})}>
-                {t('form.discard')}
-              </Button>
-            ) : null}
-          </div>
+          ) : null}
         </div>
+      </Field>
+      <Field label={t('bark.group')} hint={t('bark.groupHint')}>
+        <input
+          className="dn-input"
+          value={drafts.group ?? config.bark.group}
+          onChange={(event) => onEdit({ group: event.target.value })}
+          onBlur={onCommit}
+        />
+      </Field>
+    </>
+  )
+}
+
+/** Save and discard, disabled exactly while the drafts cannot be sent. */
+function BarkActions(props: {
+  readonly busy: boolean
+  readonly dirty: boolean
+  readonly blocked: boolean
+  readonly onSave: () => void
+  readonly onDiscard: () => void
+}): ReactNode {
+  return (
+    <div className="dn-actions">
+      <Button variant="save" disabled={props.busy || !props.dirty || props.blocked} onClick={props.onSave}>
+        {props.busy ? t('form.saving') : t('form.save')}
+      </Button>
+      {props.dirty ? (
+        <Button variant="ghost" disabled={props.busy} onClick={props.onDiscard}>
+          {t('form.discard')}
+        </Button>
       ) : null}
     </div>
   )
