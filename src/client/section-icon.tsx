@@ -12,8 +12,6 @@ import type { ReactNode } from 'react'
 export interface SectionIconProps {
   /** Edge length in pixels; the shell asks for 16. */
   readonly size?: number
-  /** Whether the section is the one on screen. */
-  readonly active?: boolean
 }
 
 /** The bell shown beside the section name. */

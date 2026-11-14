@@ -9,7 +9,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { NOTIFICATION_KINDS } from '../../core/config.ts'
-import type { PublicConfig, SoundId } from '../../core/config.ts'
+import type { SoundId } from '../../core/config.ts'
 import type { NotificationKind } from '../../core/events.ts'
 import type { CurrentSessionMode } from '../../core/policy.ts'
 import { t } from '../i18n.ts'
