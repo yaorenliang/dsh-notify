@@ -94,11 +94,14 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+/** The one body length both channels were designed around. */
+const BODY_LIMIT = 220
+
 /**
  * Cap a notification body. A user message or an error can be a whole paragraph;
  * both the OS card and the push payload read better cut at a sentence boundary.
  */
-export function truncate(text: string, max = 220): string {
+export function truncate(text: string, max = BODY_LIMIT): string {
   const flat = text.replace(/\s+/g, ' ').trim()
   if (flat.length <= max) return flat
   const cut = flat.slice(0, max)
