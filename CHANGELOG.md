@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.1.0 — unreleased
+## 0.1.1 — 2026-11-14
+
+Releases now go out from GitHub Actions through trusted publishing: the npm side
+trusts this repository and `publish.yml`, so no token and no one-time password
+lives anywhere. The package itself is unchanged; this version exists so the
+pipeline is proven end to end.
+
+## 0.1.0 — 2026-11-14
 
 First release: one Host event model driving a browser channel (system
 notification, per-kind sound, click-to-session, collapse by kind) and a Bark
