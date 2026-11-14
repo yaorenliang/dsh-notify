@@ -47,6 +47,28 @@ export async function testChannel(channel: 'browser' | 'bark'): Promise<TestResu
   return (await response.json()) as TestResult
 }
 
+/** What one poll of the event backlog returned. */
+export interface EventPage {
+  /** The Host's newest cursor. */
+  readonly seq: number
+  /** Events recorded after the cursor this call carried. */
+  readonly events: readonly BroadcastEvent[]
+}
+
+/**
+ * Collect buffered notifications instead of holding a stream open.
+ *
+ * A page gets six connections per origin on HTTP/1.1 and a DSH tab already uses
+ * several, so the seventh — the event stream — may never open at all. This rides
+ * an ordinary request instead. A null cursor asks only where to start.
+ */
+export async function readEvents(after: number | null): Promise<EventPage> {
+  const query = after === null ? '' : `?after=${after}`
+  const response = await fetch(`/api/dsh-notify/events${query}`, { headers: { accept: 'application/json' } })
+  const body = (await response.json()) as { ok: boolean; seq: number; events?: readonly BroadcastEvent[] }
+  return { seq: body.seq, events: body.events ?? [] }
+}
+
 /**
  * Report what the person is looking at, so the Host can stay quiet for the
  * session on screen. Failures are ignored: presence is an optimisation, never

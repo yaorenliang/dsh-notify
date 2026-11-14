@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.6 — 2026-11-14
+
+Browser notifications no longer depend on holding a stream open. A page gets six
+connections per origin on HTTP/1.1 and a DSH tab holds several of them, so the
+event stream can be the one request that never gets a socket — or the browser can
+close it for good after a restart and never retry. The tab looked healthy (it
+reported presence every 20 seconds) while the phone kept working, because the push
+channel never used that stream.
+
+The Host now keeps a ten-minute, two-hundred-entry backlog with a cursor, and the
+browser falls back to collecting from it over ordinary requests when the stream
+does not open within eight seconds or the browser closes it. A new tab is handed
+the current cursor first, so nothing old is replayed.
+
 ## 0.1.5 — 2026-11-14
 
 Fixes the settings section going missing after installing from the registry: the

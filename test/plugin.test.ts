@@ -102,9 +102,10 @@ describe('plugin wiring', () => {
     vi.useRealTimers()
   })
 
-  it('registers the five authenticated routes', () => {
+  it('registers the six authenticated routes', () => {
     expect([...host.routes.keys()].sort()).toEqual([
       '/api/dsh-notify/config',
+      '/api/dsh-notify/events',
       '/api/dsh-notify/presence',
       '/api/dsh-notify/state',
       '/api/dsh-notify/stream',

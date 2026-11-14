@@ -15,6 +15,7 @@ import { PRESENCE_TTL_MS, type Presence } from '../core/policy.ts'
 import { ConfigStore } from './store.ts'
 import { Dispatcher } from './dispatcher.ts'
 import { SseHub, type SseSink } from './sse.ts'
+import { Backlog } from './backlog.ts'
 import { pushBark } from './bark.ts'
 import { composeTitle } from './title.ts'
 import type { DshHost, SessionEventLike, SessionLike } from './types.ts'
@@ -28,6 +29,7 @@ const ROUTES = {
   config: '/api/dsh-notify/config',
   presence: '/api/dsh-notify/presence',
   state: '/api/dsh-notify/state',
+  events: '/api/dsh-notify/events',
   test: '/api/dsh-notify/test',
 } as const
 
@@ -63,6 +65,8 @@ export function apply(ctx: Context): void {
   store.load()
 
   const hub = new SseHub()
+  // Stands in for a stream a browser cannot open; see Backlog's header.
+  const backlog = new Backlog()
   const memories = new Map<string, SessionMemory>()
   const settling = new Map<string, { timer: ReturnType<typeof setTimeout>; id: string }>()
   const presenceByClient = new Map<string, Presence>()
@@ -71,8 +75,12 @@ export function apply(ctx: Context): void {
     config: () => store.get(),
     presence: () => effectivePresence(),
     browser: (event, title) => {
+      const payload = { ...event, title }
+      // Recorded before fan-out: a tab that cannot open a stream polls for it,
+      // and one that can gets it live. Either way the event is not lost.
+      backlog.record(payload)
       if (hub.size === 0) return false
-      hub.broadcast({ event: 'notification', data: JSON.stringify({ ...event, title }) })
+      hub.broadcast({ event: 'notification', data: JSON.stringify(payload) })
       return true
     },
     bark: (event, title) => pushBark(store.get(), event, title),
@@ -250,6 +258,19 @@ export function apply(ctx: Context): void {
           },
           presence: effectivePresence(),
         })),
+      }),
+      host.connection.fetch.register({
+        path: ROUTES.events,
+        methods: ['GET'],
+        requestBody: 'buffered',
+        fetch: async (request) => {
+          // No cursor means "tell me where to start", so a fresh tab never
+          // replays cards that were already shown minutes ago.
+          const raw = new URL(request.url, 'http://localhost').searchParams.get('after')
+          const after = raw === null ? null : Number(raw)
+          const slice = backlog.since(Number.isFinite(after) ? after : null)
+          return json({ ok: true, seq: slice.seq, events: slice.entries })
+        },
       }),
       host.connection.fetch.register({
         path: ROUTES.test,

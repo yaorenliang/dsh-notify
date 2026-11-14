@@ -1,65 +1,104 @@
 /**
- * The live channel: one EventSource on the Host stream.
+ * The live channel, with a fallback for the case where no stream can open.
  *
- * EventSource reconnects on its own with a Last-Event-ID this stream never sets,
- * which is exactly right: a notification is a moment, not a ledger, and replaying
- * missed ones after a reload would be noise.
+ * SSE is the right transport: one connection, instant delivery. But a page gets
+ * six connections per origin on HTTP/1.1, and a DSH tab holds several of them; if
+ * the event stream is the seventh it never opens, and the tab looks healthy while
+ * receiving nothing. A browser only retries a `CONNECTING` stream forever when it
+ * is queued behind those sockets, and gives up entirely when a response is not
+ * `text/event-stream`.
  *
- * It does not reconnect after every failure, though: a response that is not
- * `text/event-stream` — a 401 from a half-restarted Host, a request the browser
- * dropped — leaves the object CLOSED for good, and the page keeps looking
- * healthy while nothing arrives. A tab left open across a restart would then
- * never hear another notification. So a permanently closed stream is rebuilt
- * here, on a widening delay.
+ * So the stream is given a deadline. If it is not open by then — or the browser
+ * closes it for good — this switches to collecting the same events from the
+ * Host's backlog over ordinary requests, which fit in whatever slot is free.
  */
-import type { BroadcastEvent } from './api.ts'
+import { readEvents, type BroadcastEvent } from './api.ts'
 
-/** Delays between rebuilds of a stream the browser gave up on, in milliseconds. */
-const RETRY_MS = [2_000, 5_000, 15_000, 30_000, 60_000]
+/** How long the stream has to open before polling takes over. */
+const STREAM_DEADLINE_MS = 8_000
 
-/** Open the notification stream; the returned function closes it for good. */
+/** How often the fallback asks for what it missed. */
+const POLL_MS = 3_000
+
+/** The fields a payload must carry to be worth showing. */
+function isEvent(value: unknown): value is BroadcastEvent {
+  const candidate = value as Partial<BroadcastEvent> | null
+  return candidate !== null && typeof candidate?.id === 'string' && typeof candidate?.kind === 'string'
+}
+
+/** Open the notification channel; the returned function closes it for good. */
 export function subscribeNotifications(onEvent: (event: BroadcastEvent) => void): () => void {
   let source: EventSource | null = null
-  let retry = 0
-  let timer: ReturnType<typeof setTimeout> | null = null
+  let deadline: ReturnType<typeof setTimeout> | null = null
+  let pollTimer: ReturnType<typeof setTimeout> | null = null
+  let cursor: number | null = null
   let disposed = false
+  let polling = false
+
+  const deliver = (value: unknown): void => {
+    if (isEvent(value)) onEvent(value)
+  }
+
+  const poll = async (): Promise<void> => {
+    if (disposed) return
+    try {
+      const page = await readEvents(cursor)
+      cursor = page.seq
+      for (const event of page.events) deliver(event)
+    } catch {
+      // The next tick tries again; a missing poll costs latency, not the event.
+    }
+    if (disposed) return
+    pollTimer = setTimeout(() => void poll(), POLL_MS)
+  }
+
+  const fallBackToPolling = (): void => {
+    if (disposed || polling) return
+    polling = true
+    if (deadline !== null) clearTimeout(deadline)
+    source?.close()
+    source = null
+    void poll()
+  }
 
   const open = (): void => {
     source = new EventSource('/api/dsh-notify/stream')
-    listen(source)
-  }
-
-  const listen = (connection: EventSource): void => {
-    connection.addEventListener('notification', (message) => {
+    source.addEventListener('notification', (message) => {
       const payload = (message as MessageEvent<string>).data
       try {
-        const event = JSON.parse(payload) as BroadcastEvent
-        if (typeof event.id === 'string' && typeof event.kind === 'string') onEvent(event)
+        deliver(JSON.parse(payload))
       } catch {
-        // A malformed frame is dropped rather than breaking the stream.
+        // A malformed frame is dropped rather than breaking the channel.
       }
     })
-    connection.addEventListener('error', () => {
-      // CONNECTING means the browser is retrying by itself; only a CLOSED stream
-      // needs a new object, and only after a pause so a downed Host is not hammered.
-      if (disposed || connection.readyState !== EventSource.CLOSED) return
-      connection.close()
-      const wait = RETRY_MS[Math.min(retry, RETRY_MS.length - 1)] ?? RETRY_MS[0]
-      retry += 1
-      timer = setTimeout(() => {
-        if (!disposed) open()
-      }, wait)
+    source.addEventListener('open', () => {
+      if (deadline !== null) clearTimeout(deadline)
+      deadline = null
     })
-    connection.addEventListener('open', () => {
-      retry = 0
+    source.addEventListener('error', () => {
+      // CONNECTING means the browser is still retrying by itself. CLOSED means it
+      // never will, which is what the fallback exists for.
+      if (disposed || source === null || source.readyState !== EventSource.CLOSED) return
+      fallBackToPolling()
     })
+
+    if (typeof EventSource !== 'undefined') {
+      deadline = setTimeout(() => {
+        // Still connecting after the deadline: the request is queued behind the
+        // tab's other sockets and may stay there for as long as the page lives.
+        if (source !== null && source.readyState !== EventSource.OPEN) fallBackToPolling()
+      }, STREAM_DEADLINE_MS)
+    }
   }
 
   if (typeof EventSource !== 'undefined') open()
+  else fallBackToPolling()
 
   return () => {
     disposed = true
-    if (timer !== null) clearTimeout(timer)
+    if (deadline !== null) clearTimeout(deadline)
+    if (pollTimer !== null) clearTimeout(pollTimer)
     source?.close()
+    source = null
   }
 }
