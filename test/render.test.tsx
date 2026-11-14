@@ -92,4 +92,14 @@ describe('settings page', () => {
     const html = render(stillModel(snapshot(withChannels(), { error: 'network down' })))
     expect(html).toContain('network down')
   })
+
+  it('ends with one quiet repository line, after the controls', () => {
+    const html = render(stillModel(snapshot(withChannels())))
+    const invite = html.indexOf('dn-invite')
+    const lastBlock = html.lastIndexOf('dn-block')
+    expect(invite).toBeGreaterThan(lastBlock)
+    expect(html).toContain('href="https://github.com/yaorenliang/dsh-notify"')
+    expect(html).toContain('rel="noopener noreferrer"')
+    expect(html).toContain('target="_blank"')
+  })
 })

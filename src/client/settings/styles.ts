@@ -659,6 +659,42 @@ const CSS = `
   padding: 14px 16px 16px 16px;
   border-top: 0.5px solid var(--dsw-alias-border-l2);
 }
+
+/* The foot of the page: one quiet line, after everything the page is for. */
+.dn-invite {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 0;
+  padding-top: 14px;
+  border-top: 0.5px solid var(--dsw-alias-border-l2);
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.dn-invite__star {
+  font-size: 13px;
+  line-height: 1;
+  color: var(--dsw-alias-state-warn-primary);
+}
+
+.dn-invite__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--dsw-alias-label-secondary);
+  text-decoration: none;
+}
+
+.dn-invite__link:hover {
+  color: var(--dsw-alias-label-primary);
+  text-decoration: underline;
+}
+
+.dn-invite__out {
+  opacity: 0.7;
+}
 `;
 
 /**
