@@ -6,7 +6,7 @@
  * are live. Listeners upstream only classify.
  */
 import type { NotificationEvent } from '../core/events.ts'
-import type { NotifyConfig } from '../core/config.ts'
+import { barkReady, type NotifyConfig } from '../core/config.ts'
 import { DEFAULT_POLICY, collapseKey, decideDelivery, type DeliveryPolicy, type PolicyFacts, type Presence } from '../core/policy.ts'
 import { composeTitle } from './title.ts'
 import type { BarkResult } from './bark.ts'
@@ -89,7 +89,7 @@ export class Dispatcher {
     if (config.browser.enabled && this.ports.browser(event, title)) {
       channels.push('browser')
     }
-    if (config.bark.enabled && config.bark.deviceKey.trim().length > 0) {
+    if (barkReady(config)) {
       channels.push('bark')
     }
     if (channels.length === 0) return { delivered: false, suppressed: 'no-channel', channels: [] }

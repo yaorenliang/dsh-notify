@@ -109,6 +109,16 @@ export function isMaskEcho(value: unknown): boolean {
   return typeof value === 'string' && value.startsWith('••••••••')
 }
 
+/**
+ * Whether the phone channel can actually deliver.
+ *
+ * Switched on is not enough: without a device key a push has no destination, so
+ * both the dispatcher and the status route ask this one question.
+ */
+export function barkReady(config: NotifyConfig): boolean {
+  return config.bark.enabled && config.bark.deviceKey.trim().length > 0
+}
+
 /** Project the stored configuration for the browser. */
 export function publicConfig(config: NotifyConfig): PublicConfig {
   const { deviceKey, ...bark } = config.bark

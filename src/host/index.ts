@@ -10,7 +10,7 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { classifyTurnEnd, truncate, type NotificationEvent, type NotificationKind } from '../core/events.ts'
 import { approvalBody, completedBody, failedBody, hostLanguageTag, interruptedBody, questionBody, resolveLocale } from '../core/render.ts'
-import { publicConfig } from '../core/config.ts'
+import { barkReady, publicConfig } from '../core/config.ts'
 import type { Presence } from '../core/policy.ts'
 import { ConfigStore } from './store.ts'
 import { Dispatcher } from './dispatcher.ts'
@@ -246,7 +246,7 @@ export function apply(ctx: Context): void {
           browsers: hub.size,
           channels: {
             browser: store.get().browser.enabled,
-            bark: store.get().bark.enabled && store.get().bark.deviceKey.trim().length > 0,
+            bark: barkReady(store.get()),
           },
           presence: effectivePresence(),
         })),
