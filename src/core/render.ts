@@ -23,7 +23,6 @@ function joinPrompt(prompt: string, detail: string): string {
   const asked = prompt.trim()
   const outcome = detail.trim()
   if (asked.length === 0) return outcome
-  if (outcome.length === 0) return asked
   return `${asked} · ${outcome}`
 }
 
