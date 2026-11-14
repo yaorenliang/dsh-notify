@@ -11,7 +11,7 @@ import { join } from 'node:path'
 import { classifyTurnEnd, truncate, type NotificationEvent, type NotificationKind } from '../core/events.ts'
 import { approvalBody, completedBody, failedBody, hostLanguageTag, interruptedBody, questionBody, resolveLocale } from '../core/render.ts'
 import { barkReady, publicConfig } from '../core/config.ts'
-import type { Presence } from '../core/policy.ts'
+import { PRESENCE_TTL_MS, type Presence } from '../core/policy.ts'
 import { ConfigStore } from './store.ts'
 import { Dispatcher } from './dispatcher.ts'
 import { SseHub, type SseSink } from './sse.ts'
@@ -291,7 +291,7 @@ export function apply(ctx: Context): void {
     const now = Date.now()
     let best: Presence | null = null
     for (const [clientId, presence] of presenceByClient) {
-      if (now - presence.at > PRESENCE_RETENTION_MS) {
+      if (now - presence.at > PRESENCE_TTL_MS) {
         presenceByClient.delete(clientId)
         continue
       }
@@ -467,9 +467,6 @@ function json(value: unknown, status = 200): Response {
 function configPath(host: DshHost): string {
   return join(profileDir(host), 'dsh-notify.json')
 }
-
-/** Presence entries older than this are dropped instead of answering for a closed tab. */
-const PRESENCE_RETENTION_MS = 5 * 60_000
 
 /** Read one optional service without tripping Cordis's inject guard. */
 function optionalService<T>(host: DshHost, name: string): T | undefined {
