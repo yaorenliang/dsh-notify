@@ -87,16 +87,16 @@ describe('truncate', () => {
   })
 
   it('cuts on a sentence boundary when one is late enough', () => {
-    const text = `${'word '.repeat(20)}. ${'more '.repeat(40)}`
-    const cut = truncate(text, 120)
+    const text = `${'word '.repeat(40)}. ${'more '.repeat(40)}`
+    const cut = truncate(text)
     expect(cut.endsWith('.')).toBe(true)
-    expect(cut.length).toBeLessThanOrEqual(121)
+    expect(cut.length).toBeLessThanOrEqual(221)
   })
 
   it('adds an ellipsis when no boundary exists', () => {
-    const cut = truncate('x'.repeat(300), 100)
+    const cut = truncate('x'.repeat(300))
     expect(cut.endsWith('…')).toBe(true)
-    expect(cut.length).toBe(101)
+    expect(cut.length).toBe(221)
   })
 })
 

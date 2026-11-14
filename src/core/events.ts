@@ -98,10 +98,10 @@ const BODY_LIMIT = 220
  * Cap a notification body. A user message or an error can be a whole paragraph;
  * both the OS card and the push payload read better cut at a sentence boundary.
  */
-export function truncate(text: string, max = BODY_LIMIT): string {
+export function truncate(text: string): string {
   const flat = text.replace(/\s+/g, ' ').trim()
-  if (flat.length <= max) return flat
-  const cut = flat.slice(0, max)
+  if (flat.length <= BODY_LIMIT) return flat
+  const cut = flat.slice(0, BODY_LIMIT)
   const stop = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('。'), cut.lastIndexOf('! '), cut.lastIndexOf('? '))
-  return stop > max * 0.6 ? cut.slice(0, stop + 1) : `${cut.trimEnd()}…`
+  return stop > BODY_LIMIT * 0.6 ? cut.slice(0, stop + 1) : `${cut.trimEnd()}…`
 }

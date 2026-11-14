@@ -21,7 +21,7 @@ import { Block } from './layout.tsx'
 import { PageHeading, LoadingPage, RepositoryInvite } from './page-chrome.tsx'
 import { MasterRules } from './master-rules.tsx'
 import { BrowserChannel } from './browser-channel.tsx'
-import { BarkChannel } from './bark-channel.tsx'
+import { BarkChannel, useBarkDraft } from './bark-channel.tsx'
 import { DetailBlocks } from './event-tables.tsx'
 
 /** What the page receives from its registration. */
@@ -115,6 +115,8 @@ function ChannelCards(props: {
   readonly onRequestPermission: () => void
 }): ReactNode {
   const { config, permission, busy, onSave, onCommit, onRequestPermission } = props
+  // The draft lives here, above the switch, so closing a channel does not discard what was typed.
+  const barkDraft = useBarkDraft(config, onCommit)
 
   return (
     <Block title={t('channel.title')}>
@@ -127,7 +129,7 @@ function ChannelCards(props: {
           onRequestPermission={onRequestPermission}
         />
         <div className="dn-channelSep" />
-        <BarkChannel config={config} busy={busy} onSave={onSave} onCommit={onCommit} />
+        <BarkChannel config={config} busy={busy} onSave={onSave} draft={barkDraft} />
       </div>
     </Block>
   )

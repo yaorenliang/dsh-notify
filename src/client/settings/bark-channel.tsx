@@ -40,7 +40,7 @@ function isBarkDirty(drafts: Drafts, config: PublicConfig): boolean {
 }
 
 /** The connection drafts, the values they override, and the one commit that sends them. */
-function useBarkDraft(config: PublicConfig, onCommit: (patch: unknown) => Promise<boolean>): {
+export function useBarkDraft(config: PublicConfig, onCommit: (patch: unknown) => Promise<boolean>): {
   readonly drafts: Drafts
   readonly edit: (patch: Drafts) => void
   readonly discard: () => void
@@ -67,17 +67,20 @@ function useBarkDraft(config: PublicConfig, onCommit: (patch: unknown) => Promis
   return { drafts, edit, discard: () => setDrafts({}), commitConnection, dirty, serverUrl, baseUrl, serverUrlInvalid, baseUrlInvalid }
 }
 
+/** The draft store the page keeps alive across the channel's switch. */
+type BarkDraft = ReturnType<typeof useBarkDraft>
+
 /** What both halves of the phone channel need from the page. */
 interface BarkSectionProps {
   readonly config: PublicConfig
   readonly busy: boolean
   readonly onSave: (patch: unknown) => void
-  readonly onCommit: (patch: unknown) => Promise<boolean>
+  readonly draft: BarkDraft
 }
 
 /** The phone channel: its switch and, while it is on, the connection form. */
 export function BarkChannel(props: BarkSectionProps): ReactNode {
-  const { config, busy, onSave, onCommit } = props
+  const { config, busy, onSave, draft } = props
 
   return (
     <div className="dn-channel">
@@ -99,7 +102,7 @@ export function BarkChannel(props: BarkSectionProps): ReactNode {
         </div>
       </div>
       {config.bark.enabled ? (
-        <BarkConnectionForm config={config} busy={busy} onSave={onSave} onCommit={onCommit} />
+        <BarkConnectionForm config={config} busy={busy} onSave={onSave} draft={draft} />
       ) : null}
     </div>
   )
@@ -107,8 +110,7 @@ export function BarkChannel(props: BarkSectionProps): ReactNode {
 
 /** The connection settings, held as drafts until the Host accepts them. */
 function BarkConnectionForm(props: BarkSectionProps): ReactNode {
-  const { config, busy, onSave, onCommit } = props
-  const draft = useBarkDraft(config, onCommit)
+  const { config, busy, onSave, draft } = props
   const { drafts, edit, commitConnection, dirty, serverUrl, baseUrl, serverUrlInvalid, baseUrlInvalid } = draft
 
   return (

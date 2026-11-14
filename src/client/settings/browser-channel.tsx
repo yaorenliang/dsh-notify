@@ -18,6 +18,8 @@ export function BrowserChannel(props: {
   readonly onRequestPermission: () => void
 }): ReactNode {
   const { config, permission, busy, onSave, onRequestPermission } = props
+  // The slider lives above the switch, so closing the channel does not discard the value in flight.
+  const volume = useVolumeDraft(config, onSave)
 
   const onToggle = (next: boolean): void => {
     // The permission prompt only opens inside the gesture, so ask before awaiting.
@@ -44,7 +46,7 @@ export function BrowserChannel(props: {
       </div>
       {config.browser.enabled ? (
         <div className="dn-channelBody">
-          <VolumeField stored={Math.round(config.browser.volume * 100)} busy={busy} onCommit={(value) => onSave({ browser: { volume: value / 100 } })} />
+          <VolumeField value={volume.value} busy={busy} onChange={volume.onChange} onCommit={volume.onCommit} />
           {permission === 'default' ? (
             <div className="dn-field">
               <p className="dn-hint">{t('browser.defaultHint')}</p>
@@ -63,20 +65,31 @@ export function BrowserChannel(props: {
   )
 }
 
-/** The volume slider, committed on release instead of on every pixel. */
-function VolumeField(props: {
-  readonly stored: number
-  readonly busy: boolean
-  readonly onCommit: (value: number) => void
-}): ReactNode {
+/** The volume in flight, committed on release instead of on every pixel. */
+function useVolumeDraft(config: PublicConfig, onSave: (patch: unknown) => void): {
+  readonly value: number
+  readonly onChange: (value: number) => void
+  readonly onCommit: () => void
+} {
   const [draft, setDraft] = useState<number | null>(null)
-  const value = draft ?? props.stored
+  const stored = Math.round(config.browser.volume * 100)
+  const value = draft ?? stored
 
-  const commit = (): void => {
-    if (draft === null || draft === props.stored) return
-    props.onCommit(draft)
+  const onCommit = (): void => {
+    if (draft === null || draft === stored) return
+    onSave({ browser: { volume: draft / 100 } })
   }
 
+  return { value, onChange: setDraft, onCommit }
+}
+
+/** The volume slider, committed on release instead of on every pixel. */
+function VolumeField(props: {
+  readonly value: number
+  readonly busy: boolean
+  readonly onChange: (value: number) => void
+  readonly onCommit: () => void
+}): ReactNode {
   return (
     <Field label={t('sound.volume')} hint={t('sound.volumeHint')}>
       <div className="dn-volumeRow">
@@ -87,14 +100,14 @@ function VolumeField(props: {
           max={100}
           step={1}
           aria-label={t('sound.volume')}
-          value={value}
+          value={props.value}
           disabled={props.busy}
-          onChange={(event) => setDraft(Number(event.target.value))}
-          onPointerUp={commit}
-          onKeyUp={commit}
-          onBlur={commit}
+          onChange={(event) => props.onChange(Number(event.target.value))}
+          onPointerUp={props.onCommit}
+          onKeyUp={props.onCommit}
+          onBlur={props.onCommit}
         />
-        <span className="dn-volumeValue">{t('sound.volumeValue', { value })}</span>
+        <span className="dn-volumeValue">{t('sound.volumeValue', { value: props.value })}</span>
       </div>
     </Field>
   )
