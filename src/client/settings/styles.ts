@@ -89,10 +89,6 @@ const CSS = `
   padding: 12px 0;
 }
 
-.dn-rowBlock > .dn-row {
-  padding: 0;
-}
-
 .dn-rowText {
   display: flex;
   flex-direction: column;
@@ -180,14 +176,6 @@ const CSS = `
 .dn-input:focus {
   border-color: var(--dsw-alias-state-business-primary, var(--dsw-alias-brand-primary));
   outline: none;
-}
-
-.dn-input[aria-invalid='true'] {
-  border-color: var(--dsw-alias-state-error-primary);
-}
-
-.dn-input:disabled {
-  opacity: 0.5;
 }
 
 .dn-button {
