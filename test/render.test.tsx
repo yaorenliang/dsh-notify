@@ -81,6 +81,17 @@ describe('settings page', () => {
     expect(html).not.toContain('Title prefix')
   })
 
+  it('offers one gesture-bound prompt while the browser has not decided', () => {
+    const html = render(stillModel(snapshot(withChannels(), { permission: 'default' })))
+    expect(html).toContain('Allow notifications')
+    expect(html).toContain('never on its own')
+  })
+
+  it('does not ask again once the browser answered', () => {
+    const html = render(stillModel(snapshot(withChannels(), { permission: 'granted' })))
+    expect(html).not.toContain('Allow notifications')
+  })
+
   it('never prints the stored device key', () => {
     const html = render(stillModel(snapshot(withChannels())))
     expect(html).not.toContain('key-123456789')

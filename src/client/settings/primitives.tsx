@@ -41,8 +41,8 @@ export interface Choice<T extends string> {
   readonly label: string
 }
 
-/** The control used where the choices must stay visible. */
-export interface SegmentedProps<T extends string> {
+/** What a control that picks one of several choices needs. */
+export interface ChoiceControlProps<T extends string> {
   readonly value: T
   readonly options: readonly Choice<T>[]
   readonly label: string
@@ -51,7 +51,7 @@ export interface SegmentedProps<T extends string> {
 }
 
 /** A radio group drawn as the shell's segmented control. */
-export function Segmented<T extends string>({ value, options, label, disabled, onChange }: SegmentedProps<T>): ReactNode {
+export function Segmented<T extends string>({ value, options, label, disabled, onChange }: ChoiceControlProps<T>): ReactNode {
   return (
     <div className="dn-segmented" role="radiogroup" aria-label={label}>
       {options.map((option) => (
@@ -71,22 +71,13 @@ export function Segmented<T extends string>({ value, options, label, disabled, o
   )
 }
 
-/** A select whose trigger is the shell's 34px field and whose list is a popup. */
-export interface SelectMenuProps<T extends string> {
-  readonly value: T
-  readonly options: readonly Choice<T>[]
-  readonly label: string
-  readonly disabled?: boolean | undefined
-  readonly onChange: (next: T) => void
-}
-
 /**
  * A menu-backed field.
  *
  * The list closes on an outside press and on Escape, and the trigger holds focus
  * afterwards, so keyboard users never lose their place.
  */
-export function SelectMenu<T extends string>({ value, options, label, disabled, onChange }: SelectMenuProps<T>): ReactNode {
+export function SelectMenu<T extends string>({ value, options, label, disabled, onChange }: ChoiceControlProps<T>): ReactNode {
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement | null>(null)
   const trigger = useRef<HTMLButtonElement | null>(null)

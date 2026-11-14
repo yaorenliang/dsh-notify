@@ -45,6 +45,12 @@ export function BrowserChannel(props: {
       {config.browser.enabled ? (
         <div className="dn-channelBody">
           <VolumeField stored={Math.round(config.browser.volume * 100)} busy={busy} onCommit={(value) => onSave({ browser: { volume: value / 100 } })} />
+          {permission === 'default' ? (
+            <div className="dn-field">
+              <p className="dn-hint">{t('browser.defaultHint')}</p>
+              <Button onClick={() => void onRequestPermission()}>{t('browser.request')}</Button>
+            </div>
+          ) : null}
           {permission === 'denied' ? (
             <div className="dn-field">
               <p className="dn-hint">{t('browser.deniedHint')}</p>

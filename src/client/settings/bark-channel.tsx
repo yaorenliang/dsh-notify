@@ -67,14 +67,16 @@ function useBarkDraft(config: PublicConfig, onCommit: (patch: unknown) => Promis
   return { drafts, edit, discard: () => setDrafts({}), commitConnection, dirty, serverUrl, baseUrl, serverUrlInvalid, baseUrlInvalid }
 }
 
-/** The browser channel: its switch, permission tag, volume and denial hint. */
-
-export function BarkChannel(props: {
+/** What both halves of the phone channel need from the page. */
+interface BarkSectionProps {
   readonly config: PublicConfig
   readonly busy: boolean
   readonly onSave: (patch: unknown) => void
   readonly onCommit: (patch: unknown) => Promise<boolean>
-}): ReactNode {
+}
+
+/** The phone channel: its switch and, while it is on, the connection form. */
+export function BarkChannel(props: BarkSectionProps): ReactNode {
   const { config, busy, onSave, onCommit } = props
 
   return (
@@ -104,12 +106,7 @@ export function BarkChannel(props: {
 }
 
 /** The connection settings, held as drafts until the Host accepts them. */
-function BarkConnectionForm(props: {
-  readonly config: PublicConfig
-  readonly busy: boolean
-  readonly onSave: (patch: unknown) => void
-  readonly onCommit: (patch: unknown) => Promise<boolean>
-}): ReactNode {
+function BarkConnectionForm(props: BarkSectionProps): ReactNode {
   const { config, busy, onSave, onCommit } = props
   const draft = useBarkDraft(config, onCommit)
   const { drafts, edit, commitConnection, dirty, serverUrl, baseUrl, serverUrlInvalid, baseUrlInvalid } = draft
