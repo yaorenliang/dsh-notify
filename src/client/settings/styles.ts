@@ -429,14 +429,6 @@ const CSS = `
   background: var(--dsw-alias-state-success-primary);
 }
 
-.dn-dot--warning {
-  background: var(--dsw-alias-state-warn-primary);
-}
-
-.dn-dot--error {
-  background: var(--dsw-alias-state-error-primary);
-}
-
 .dn-dot--idle {
   background: var(--dsw-alias-state-idle-primary);
 }

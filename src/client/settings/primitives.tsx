@@ -168,7 +168,7 @@ export function Tag({ children, tone = 'neutral' }: TagProps): ReactNode {
 
 /** The dot in front of a status line. */
 export interface StateDotProps {
-  readonly state: 'done' | 'warning' | 'error' | 'idle'
+  readonly state: 'done' | 'idle'
 }
 
 /** A colour-only dot; the text beside it carries the meaning. */
