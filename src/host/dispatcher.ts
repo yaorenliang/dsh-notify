@@ -77,7 +77,7 @@ export class Dispatcher {
     }
     const decision = decideDelivery(event, facts, this.ports.presence(), policy, now)
     if (!decision.deliver) {
-      return { delivered: false, suppressed: decision.suppression ?? 'current-session', channels: [] }
+      return { delivered: false, suppressed: decision.suppression, channels: [] }
     }
 
     if (!this.withinRate(event.sessionId, now)) {

@@ -49,10 +49,9 @@ export const DEFAULT_POLICY: DeliveryPolicy = Object.freeze({
 export type Suppression = 'subagent' | 'current-session'
 
 /** The decision plus the reason, so a suppression is explainable. */
-export interface DeliveryDecision {
-  readonly deliver: boolean
-  readonly suppression?: Suppression
-}
+export type DeliveryDecision =
+  | { readonly deliver: true }
+  | { readonly deliver: false; readonly suppression: Suppression }
 
 /** The facts about an event's session that policy reads. */
 export interface PolicyFacts {

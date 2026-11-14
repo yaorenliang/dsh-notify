@@ -101,7 +101,7 @@ describe('decideDelivery', () => {
   const main = { subagent: false }
 
   it('silences a subagent session by default', () => {
-    expect(decideDelivery(event(), { subagent: true }, null).suppression).toBe('subagent')
+    expect(decideDelivery(event(), { subagent: true }, null)).toEqual({ deliver: false, suppression: 'subagent' })
   })
 
   it('lets a subagent through when the policy allows it', () => {
@@ -110,7 +110,7 @@ describe('decideDelivery', () => {
 
   it('stays quiet while the same session is visible and focused', () => {
     const presence = { visible: true, focused: true, sessionId: 's1', at }
-    expect(decideDelivery(event(), main, presence, DEFAULT_POLICY, at + 1000).suppression).toBe('current-session')
+    expect(decideDelivery(event(), main, presence, DEFAULT_POLICY, at + 1000)).toEqual({ deliver: false, suppression: 'current-session' })
   })
 
   it('alerts a hidden tab for the same session', () => {
