@@ -6,8 +6,7 @@
  * in the same snapshot.
  */
 import type { PublicConfig } from '../core/config.ts'
-import type { HostState } from './api.ts'
-import { readConfig, readState, testChannel, writeConfig } from './api.ts'
+import { readConfig, testChannel, writeConfig } from './api.ts'
 import { permission, requestPermission as askPermission, type Permission } from './notify.ts'
 
 /** How long a success line stays on screen. */
@@ -17,8 +16,6 @@ const NOTICE_MS = 1600
 export interface SettingsSnapshot {
   /** The stored configuration, or null while the first read is in flight. */
   readonly config: PublicConfig | null
-  /** Host status (attached streams, channel readiness), when read. */
-  readonly state: HostState | null
   /** Browser notification permission. */
   readonly permission: Permission
   /** A command is in flight. */
@@ -41,7 +38,6 @@ export interface SettingsModel {
 
 const INITIAL: SettingsSnapshot = {
   config: null,
-  state: null,
   permission: permission(),
   busy: false,
   error: null,
@@ -92,8 +88,8 @@ export function createSettingsModel(): SettingsModel {
     async refresh() {
       set({ busy: true, error: null })
       try {
-        const [config, state] = await Promise.all([readConfig(), readState()])
-        set({ config, state, busy: false, permission: permission() })
+        const config = await readConfig()
+        set({ config, busy: false, permission: permission() })
       } catch (error) {
         fail(error)
       }
@@ -102,8 +98,7 @@ export function createSettingsModel(): SettingsModel {
       set({ busy: true, error: null, notice: null })
       try {
         const config = await writeConfig(patch)
-        const state = await readState()
-        set({ config, state, busy: false })
+        set({ config, busy: false })
         announce('Saved')
       } catch (error) {
         fail(error)

@@ -12,15 +12,6 @@ export interface BroadcastEvent extends NotificationEvent {
   readonly title: string
 }
 
-/** Host-side status shown on the settings page. */
-export interface HostState {
-  readonly ok: boolean
-  /** Attached browser streams. */
-  readonly browsers: number
-  readonly channels: { readonly browser: boolean; readonly bark: boolean }
-  readonly presence: { readonly visible: boolean; readonly focused: boolean; readonly sessionId: string | null; readonly at: number } | null
-}
-
 /** What one channel test produced. */
 export interface TestResult {
   readonly ok: boolean
@@ -44,12 +35,6 @@ export async function writeConfig(patch: unknown): Promise<PublicConfig> {
   })
   const body = (await response.json()) as { ok: boolean; config: PublicConfig }
   return body.config
-}
-
-/** Read the Host status line. */
-export async function readState(): Promise<HostState> {
-  const response = await fetch('/api/dsh-notify/state', { headers: { accept: 'application/json' } })
-  return (await response.json()) as HostState
 }
 
 /** Fire one test notification at a channel. */

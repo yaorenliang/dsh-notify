@@ -20,7 +20,6 @@ function stillModel(snapshot: SettingsSnapshot): SettingsModel {
 function snapshot(config: PublicConfig, patch: Partial<SettingsSnapshot> = {}): SettingsSnapshot {
   return {
     config,
-    state: { ok: true, browsers: 2, channels: { browser: true, bark: true }, presence: null },
     permission: 'granted',
     busy: false,
     error: null,

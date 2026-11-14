@@ -10,8 +10,6 @@ let testAnswer: Record<string, unknown>
 /** Every request the model issued, for assertions. */
 let calls: { url: string; method: string; body: unknown }[]
 
-const state = { ok: true, browsers: 1, channels: { browser: true, bark: false }, presence: null }
-
 function respond(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
 }
@@ -30,7 +28,6 @@ beforeEach(() => {
       stored = { ...stored, ...(body as object) }
       return respond({ ok: true, config: stored })
     }
-    if (String(input).endsWith('/state')) return respond(state)
     if (String(input).endsWith('/test')) return respond({ ...testAnswer, channel: (body as { channel: string }).channel })
     return respond({ ok: false })
   })
@@ -41,7 +38,7 @@ afterEach(() => {
 })
 
 describe('settings model', () => {
-  it('loads the configuration and the Host state', async () => {
+  it('loads the configuration', async () => {
     const model = createSettingsModel()
     const seen: boolean[] = []
     model.subscribe(() => seen.push(model.getSnapshot().busy))
@@ -51,7 +48,6 @@ describe('settings model', () => {
     await pending
 
     expect(model.getSnapshot().config).toEqual(stored)
-    expect(model.getSnapshot().state).toEqual(state)
     expect(model.getSnapshot().busy).toBe(false)
     expect(seen).toEqual([true, false])
   })
