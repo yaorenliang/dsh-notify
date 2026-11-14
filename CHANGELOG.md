@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.4 — 2026-11-14
+
+A fresh install now says what the browser has not decided yet, and offers the one
+button that can ask: a notification prompt only opens inside a gesture, so nothing
+fires by itself.
+
+Under the same version the plugin was taken apart and put back together without
+changing what it does: the notification fields nothing read are gone, the settings
+page is six modules instead of one 357-line component, its stylesheet is seven
+cascade-order modules that join to the exact same 12,048 characters, and the
+connection drafts now survive closing a channel.
+
 ## 0.1.3 — 2026-11-14
 
 The page ends with one quiet line: a star ask and a link to this repository,
