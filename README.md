@@ -1,5 +1,7 @@
 # dsh-notify
 
+[![npm](https://img.shields.io/npm/v/@yaorenliang%2Fdsh-notify?label=npm)](https://www.npmjs.com/package/@yaorenliang/dsh-notify) [![CI](https://github.com/yaorenliang/dsh-notify/actions/workflows/ci.yml/badge.svg)](https://github.com/yaorenliang/dsh-notify/actions/workflows/ci.yml) [![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+
 [中文](./README.zh.md) | English
 
 One notification plugin for [DeepSeek Harness](https://github.com/deepseek-ai/dsh): **browser system notifications and Bark push, decided once**.
