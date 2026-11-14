@@ -1,6 +1,6 @@
 {
   "name": "@yaorenliang/dsh-notify",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Unified notification plugin for DeepSeek Harness: browser notifications, sound, and Bark push over one event model.",
   "type": "module",
   "license": "MIT",
