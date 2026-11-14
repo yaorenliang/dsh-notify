@@ -10,8 +10,6 @@ import type { NotificationEvent } from '../core/events.ts'
 export interface BroadcastEvent extends NotificationEvent {
   /** Title composed by the Host: a status mark plus the session name. */
   readonly title: string
-  /** Present on a settings-page test push. */
-  readonly test?: boolean
 }
 
 /** Host-side status shown on the settings page. */
@@ -27,7 +25,6 @@ export interface HostState {
 export interface TestResult {
   readonly ok: boolean
   readonly channel: 'browser' | 'bark'
-  readonly browsers?: number
   readonly result?: { readonly ok: boolean; readonly reason?: string }
 }
 
