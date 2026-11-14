@@ -433,9 +433,9 @@ function openStream(hub: SseHub, encoder: TextEncoder, request: Request): Respon
           request.signal.addEventListener('abort', listener, { once: true })
         },
       }
-      const remove = hub.add(sink)
+      hub.add(sink)
+      // Removal is hub.add's own abort listener; this one only ends the stream.
       request.signal.addEventListener('abort', () => {
-        remove()
         try {
           controller.close()
         } catch {
