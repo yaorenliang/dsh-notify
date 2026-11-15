@@ -89,6 +89,7 @@ export function NotificationsSection({ model }: NotificationsSectionProps): Reac
         disabled={disabled}
         onSave={save}
         onTest={(channel) => void model.test(channel)}
+        onAudition={(kind, sound) => void model.audition(kind, sound)}
       />
 
       <RepositoryInvite />

@@ -67,11 +67,17 @@ export function DetailBlocks(props: {
   readonly disabled: boolean
   readonly onSave: (patch: unknown) => void
   readonly onTest: (channel: 'browser' | 'bark') => void
+  readonly onAudition: (kind: NotificationKind, sound: string) => void
 }): ReactNode {
   return (
     <>
       <Block title={t('events.title')}>
-        <EventSoundTable config={props.config} disabled={props.disabled} onSave={props.onSave} />
+        <EventSoundTable
+          config={props.config}
+          disabled={props.disabled}
+          onSave={props.onSave}
+          onAudition={props.onAudition}
+        />
       </Block>
 
       <Block title={t('status.title')}>
@@ -92,8 +98,9 @@ function EventSoundTable(props: {
   readonly config: PublicConfig
   readonly disabled: boolean
   readonly onSave: (patch: unknown) => void
+  readonly onAudition: (kind: NotificationKind, sound: string) => void
 }): ReactNode {
-  const { config, disabled, onSave } = props
+  const { config, disabled, onSave, onAudition } = props
   const allEventsOff = NOTIFICATION_KINDS.every((kind) => !config.events[kind].enabled)
 
   return (
@@ -120,14 +127,24 @@ function EventSoundTable(props: {
               value={config.events[event.kind].sound}
               options={SOUND_OPTIONS}
               disabled={disabled || !config.browser.enabled}
-              onChange={(sound) => onSave({ events: { [event.kind]: { sound } } })}
+              onChange={(sound) => {
+                onSave({ events: { [event.kind]: { sound } } })
+                // Both pickers audition on change: the local one here, the phone
+                // one through the Host, because the phone plays its own sound.
+                play(sound, config.browser.volume)
+              }}
             />
             <SelectMenu<string>
               label={t('sound.tableBark')}
               value={config.events[event.kind].barkSound}
               options={BARK_OPTIONS}
               disabled={disabled || !config.bark.enabled}
-              onChange={(barkSound) => onSave({ events: { [event.kind]: { barkSound } } })}
+              onChange={(barkSound) => {
+                onSave({ events: { [event.kind]: { barkSound } } })
+                // Without a device key a push has no destination; saying so on
+                // every pick would be a permanent error bar, so stay quiet.
+                if (config.bark.deviceKey.configured) onAudition(event.kind, barkSound)
+              }}
             />
             <Button
               variant="ghost"

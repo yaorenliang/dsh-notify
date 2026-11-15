@@ -2,6 +2,16 @@
 
 ## 0.1.6 — 2026-11-14
 
+Choosing a sound now plays it. The local picker plays the browser tone straight
+away, and the phone picker sends one push carrying the ring you just chose, so a
+ringtone can be heard before it is committed — and the phone, which plays its own
+sound, is the only thing that can let you hear it.
+
+That audition uses the same test route with a `kind` and a `sound` attached, so
+nothing is written to the configuration: cancel by picking another sound.
+
+## 0.1.6 — 2026-11-14
+
 Browser notifications no longer depend on holding a stream open. A page gets six
 connections per origin on HTTP/1.1 and a DSH tab holds several of them, so the
 event stream can be the one request that never gets a socket — or the browser can

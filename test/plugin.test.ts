@@ -232,6 +232,35 @@ describe('plugin wiring', () => {
     expect(raced).toBe('timeout')
   })
 
+  it('carries an auditioned phone sound without storing it', async () => {
+    const configRoute = host.routes.get('/api/dsh-notify/config')!
+    await configRoute.fetch(new Request('http://x/api/dsh-notify/config', {
+      method: 'POST',
+      body: JSON.stringify({ bark: { enabled: true, deviceKey: 'secret-key-5678' } }),
+    }))
+
+    const sent: { url: string; body: { sound?: string } }[] = []
+    vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+      sent.push({ url: String(url), body: JSON.parse(String(init?.body)) as { sound?: string } })
+      return new Response('{}', { status: 200 })
+    })
+    try {
+      const answer = await (await host.routes.get('/api/dsh-notify/test')!.fetch(new Request('http://x/api/dsh-notify/test', {
+        method: 'POST',
+        body: JSON.stringify({ channel: 'bark', kind: 'failed', sound: 'alarm' }),
+      }))).json() as { ok: boolean; channel: string }
+      expect(answer).toEqual({ ok: true, channel: 'bark', result: { ok: true } })
+      // The ring travels with the push; the stored document keeps its own sound.
+      expect(sent[0]?.body.sound).toBe('alarm')
+      const stored = await (await configRoute.fetch(new Request('http://x/api/dsh-notify/config'))).json() as {
+        config: { events: Record<string, { barkSound: string }> }
+      }
+      expect(stored.config.events.failed?.barkSound).toBe('system')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('always continues the approval waterfall', async () => {
     const listener = host.listeners.get('approval/request') as (request: unknown, next: () => Promise<string>) => Promise<string>
     const answered = await listener({ agent: { session: session('s4') }, toolName: 'bash', callId: 'c1' }, async () => 'user-answer')

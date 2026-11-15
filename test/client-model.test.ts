@@ -52,6 +52,18 @@ describe('settings model', () => {
     expect(seen).toEqual([true, false])
   })
 
+  it('auditions a phone sound without blocking the page', async () => {
+    const model = createSettingsModel()
+    await model.refresh()
+
+    await model.audition('failed', 'alarm')
+
+    const sent = calls.find((call) => call.url.endsWith('/test'))
+    expect(sent?.body).toEqual({ channel: 'bark', kind: 'failed', sound: 'alarm' })
+    expect(model.getSnapshot().busy).toBe(false)
+    expect(model.getSnapshot().notice).toBeNull()
+  })
+
   it('writes a patch and reports it saved', async () => {
     const model = createSettingsModel()
     await model.refresh()

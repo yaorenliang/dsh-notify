@@ -6,6 +6,7 @@
  * in the same snapshot.
  */
 import type { PublicConfig } from '../core/config.ts'
+import type { NotificationKind } from '../core/events.ts'
 import { readConfig, testChannel, writeConfig } from './api.ts'
 import { permission, requestPermission as askPermission, type Permission } from './notify.ts'
 
@@ -33,6 +34,14 @@ export interface SettingsModel {
   refresh(): Promise<void>
   save(patch: unknown): Promise<void>
   test(channel: 'browser' | 'bark'): Promise<void>
+  /**
+   * Try one phone sound without saving it.
+   *
+   * A ringtone is played by the phone, so the only way to hear it is a push that
+   * carries it. Unlike {@link test} this never blocks the page: the selection
+   * that triggered it stays usable while the push is in flight.
+   */
+  audition(kind: NotificationKind, sound: string): Promise<void>
   requestPermission(): Promise<void>
 }
 
@@ -107,7 +116,7 @@ export function createSettingsModel(): SettingsModel {
     async test(channel) {
       set({ busy: true, error: null, notice: null })
       try {
-        const result = await testChannel(channel)
+        const result = await testChannel({ channel })
         // The request can succeed while the channel refuses: the Host reports
         // "transport ok, push failed" and that must not read as a success.
         const refused = result.result !== undefined && !result.result.ok
@@ -117,6 +126,15 @@ export function createSettingsModel(): SettingsModel {
           error: accepted ? null : result.result?.reason ?? `No ${channel} channel is ready`,
         })
         announce(accepted ? `Test sent on ${channel}` : null)
+      } catch (error) {
+        fail(error)
+      }
+    },
+    async audition(kind, sound) {
+      try {
+        const result = await testChannel({ channel: 'bark', kind, sound })
+        const refused = result.result !== undefined && !result.result.ok
+        set({ error: refused ? result.result?.reason ?? 'The phone refused that sound' : null })
       } catch (error) {
         fail(error)
       }

@@ -10,7 +10,7 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { classifyTurnEnd, truncate, type NotificationEvent, type NotificationKind } from '../core/events.ts'
 import { approvalBody, completedBody, failedBody, hostLanguageTag, interruptedBody, questionBody, resolveLocale } from '../core/render.ts'
-import { barkReady, publicConfig } from '../core/config.ts'
+import { barkReady, NOTIFICATION_KINDS, publicConfig, withBarkSound } from '../core/config.ts'
 import { PRESENCE_TTL_MS, type Presence } from '../core/policy.ts'
 import { ConfigStore } from './store.ts'
 import { Dispatcher } from './dispatcher.ts'
@@ -32,6 +32,11 @@ const ROUTES = {
   events: '/api/dsh-notify/events',
   test: '/api/dsh-notify/test',
 } as const
+
+/** Whether an untrusted body names a notification kind. */
+function isKind(value: unknown): value is NotificationKind {
+  return typeof value === 'string' && (NOTIFICATION_KINDS as readonly string[]).includes(value)
+}
 
 /** How often an idle SSE connection is kept warm. */
 const HEARTBEAT_MS = 25_000
@@ -277,19 +282,25 @@ export function apply(ctx: Context): void {
         methods: ['POST'],
         requestBody: 'buffered',
         fetch: async (request) => {
-          const body = (await request.json().catch(() => ({}))) as { channel?: string }
+          // An audition names a kind and a sound; without them the route keeps its
+          // old meaning, "send one completed-turn notification through a channel".
+          const body = (await request.json().catch(() => ({}))) as { channel?: string; kind?: string; sound?: string }
+          const kind = isKind(body.kind) ? body.kind : 'completed'
           const config = store.get()
           const event: NotificationEvent = {
             id: `test:${Date.now()}`,
-            kind: 'completed',
+            kind,
             sessionId: 'dsh-notify-test',
             sessionTitle: 'DeepSeek Harness',
             body: 'This is a test notification from dsh-notify.',
             at: Date.now(),
           }
-          const title = composeTitle('completed', event.sessionTitle)
+          const title = composeTitle(kind, event.sessionTitle)
           if (body.channel === 'bark') {
-            const result = await pushBark(config, event, title)
+            // A new ring is only audible once the phone attempts it, so the sound
+            // travels with this push instead of being saved first.
+            const audition = typeof body.sound === 'string' && body.sound.length > 0
+            const result = await pushBark(audition ? withBarkSound(config, kind, body.sound as string) : config, event, title)
             return json({ ok: result.ok, channel: 'bark', result })
           }
           hub.broadcast({ event: 'notification', data: JSON.stringify({ ...event, title, test: true }) })

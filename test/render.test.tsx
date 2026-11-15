@@ -13,6 +13,7 @@ function stillModel(snapshot: SettingsSnapshot): SettingsModel {
     refresh: async () => {},
     save: async () => {},
     test: async () => {},
+    audition: async () => {},
     requestPermission: async () => {},
   }
 }

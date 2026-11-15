@@ -119,6 +119,17 @@ export function barkReady(config: NotifyConfig): boolean {
   return config.bark.enabled && config.bark.deviceKey.trim().length > 0
 }
 
+/**
+ * A copy of the configuration with one kind's phone sound replaced.
+ *
+ * Auditioning a ringtone is the only caller: the phone decides what it plays, so
+ * hearing a new one means sending a push that carries it, not rewriting what the
+ * stored configuration says.
+ */
+export function withBarkSound(config: NotifyConfig, kind: NotificationKind, barkSound: string): NotifyConfig {
+  return { ...config, events: { ...config.events, [kind]: { ...config.events[kind], barkSound } } }
+}
+
 /** Project the stored configuration for the browser. */
 export function publicConfig(config: NotifyConfig): PublicConfig {
   const { deviceKey, ...bark } = config.bark

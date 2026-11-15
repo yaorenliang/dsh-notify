@@ -4,7 +4,7 @@
  * `/api` fence, so the Host needs no token of its own.
  */
 import type { PublicConfig } from '../core/config.ts'
-import type { NotificationEvent } from '../core/events.ts'
+import type { NotificationEvent, NotificationKind } from '../core/events.ts'
 
 /** One event as the Host broadcasts it: the notification plus its final title. */
 export interface BroadcastEvent extends NotificationEvent {
@@ -17,6 +17,15 @@ export interface TestResult {
   readonly ok: boolean
   readonly channel: 'browser' | 'bark'
   readonly result?: { readonly ok: boolean; readonly reason?: string }
+}
+
+/** What one audition asks the Host for. */
+export interface Audition {
+  readonly channel: 'browser' | 'bark'
+  /** Which kind's sound to try, so the row's own preference is what is heard. */
+  readonly kind?: NotificationKind
+  /** The phone sound to carry; omit to use the stored one. */
+  readonly sound?: string
 }
 
 /** Read the current (redacted) configuration. */
@@ -38,11 +47,11 @@ export async function writeConfig(patch: unknown): Promise<PublicConfig> {
 }
 
 /** Fire one test notification at a channel. */
-export async function testChannel(channel: 'browser' | 'bark'): Promise<TestResult> {
+export async function testChannel(audition: Audition): Promise<TestResult> {
   const response = await fetch('/api/dsh-notify/test', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ channel }),
+    body: JSON.stringify(audition),
   })
   return (await response.json()) as TestResult
 }
