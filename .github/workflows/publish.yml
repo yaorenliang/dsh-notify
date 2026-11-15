@@ -48,7 +48,7 @@ jobs:
         run: |
           tag="$GITHUB_REF_NAME"
           notes=$(mktemp)
-          .github/release-notes.sh "$tag" > "$notes"
+          node .github/release-notes.mjs "$tag" > "$notes"
           if ! gh release view "$tag" >/dev/null 2>&1; then
             if [ -s "$notes" ]; then
               gh release create "$tag" --title "$tag" --notes-file "$notes"
@@ -57,14 +57,15 @@ jobs:
             fi
             exit 0
           fi
+          # A generated body is a compare link, and an empty body is what a
+          # broken earlier run left behind; both are repaired. A written body is
+          # someone's own work and is never touched.
           body=$(gh release view "$tag" --json body --jq .body)
-          case "$body" in
-            '**Full Changelog**'*)
-              if [ -s "$notes" ]; then
-                gh release edit "$tag" --notes-file "$notes"
-              fi
-              ;;
-          esac
+          if [ -z "$body" ] || [ "${body#\*\*Full Changelog\*\*}" != "$body" ]; then
+            if [ -s "$notes" ]; then
+              gh release edit "$tag" --notes-file "$notes"
+            fi
+          fi
       # Publishing twice for one version is the one mistake that cannot be taken
       # back, so the registry itself decides whether this run publishes.
       - name: Publish to npm
