@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.8 — 2026-11-15
+
+The preview button is gone. Choosing a sound already plays it, so the row now has
+one way to hear a tone instead of two — and one less control to explain.
+
 ## 0.1.7 — 2026-11-14
 
 Choosing a sound now plays it. The local picker plays the browser tone straight

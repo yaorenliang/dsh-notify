@@ -82,6 +82,15 @@ describe('settings page', () => {
     expect(html).not.toContain('Title prefix')
   })
 
+  it('has no separate preview button, because picking a sound plays it', () => {
+    const html = render(stillModel(snapshot(withChannels())))
+    // Two pickers per event and nothing else in the row: the sound is heard when
+    // it is chosen, so a "Play" button would be a second way to do one thing.
+    expect(html.match(/dn-select__trigger/g)?.length).toBe(10)
+    expect(html).not.toContain('>Play<')
+    expect(html).not.toContain('>试听<')
+  })
+
   it('offers one gesture-bound prompt while the browser has not decided', () => {
     const html = render(stillModel(snapshot(withChannels(), { permission: 'default' })))
     expect(html).toContain('Allow notifications')

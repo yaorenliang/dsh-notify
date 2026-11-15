@@ -1,6 +1,9 @@
 /**
- * The event table: one row per kind, both sounds, a preview, and the two channel
- * tests with their readiness dots.
+ * The event table: one row per kind, both sounds, and the two channel tests with
+ * their readiness dots.
+ *
+ * Picking a sound plays it, so the table has no preview button: a second control
+ * that does the same thing is one more thing to explain.
  */
 import type { ReactNode } from 'react'
 import { NOTIFICATION_KINDS } from '../../core/config.ts'
@@ -111,7 +114,6 @@ function EventSoundTable(props: {
           <span />
           <span>{t('sound.tableLocal')}</span>
           <span>{t('sound.tableBark')}</span>
-          <span />
         </div>
         {EVENTS.map((event) => (
           <div className="dn-sound__row" key={event.kind}>
@@ -146,14 +148,6 @@ function EventSoundTable(props: {
                 if (config.bark.deviceKey.configured) onAudition(event.kind, barkSound)
               }}
             />
-            <Button
-              variant="ghost"
-              disabled={disabled || !config.browser.enabled}
-              title={t('sound.previewTitle', { name: t(SOUNDS.find((sound) => sound.value === config.events[event.kind].sound)?.label ?? 'sound.browser.chime') })}
-              onClick={() => play(config.events[event.kind].sound, config.browser.volume)}
-            >
-              {t('sound.preview')}
-            </Button>
           </div>
         ))}
       </div>

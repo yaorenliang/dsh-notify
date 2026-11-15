@@ -194,7 +194,7 @@ export const PANELS = `.dn-select {
 
 .dn-sound__head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px 128px 148px 64px;
+  grid-template-columns: minmax(0, 1fr) 44px 128px 148px;
   gap: 8px;
   padding-bottom: 6px;
   font-size: 12px;
@@ -204,7 +204,7 @@ export const PANELS = `.dn-select {
 
 .dn-sound__row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px 128px 148px 64px;
+  grid-template-columns: minmax(0, 1fr) 44px 128px 148px;
   gap: 8px;
   align-items: center;
   padding: 10px 0;
