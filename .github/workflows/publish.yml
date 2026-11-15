@@ -7,6 +7,10 @@ name: Publish
 # release for that tag and publishes the package. A release made by the workflow's
 # own token would not start another workflow, which is why both steps live here
 # rather than one of them behind `release: published`.
+#
+# Every step is idempotent, so re-running on an old tag only repairs what is
+# missing: an existing release keeps its body unless that body is the compare link
+# GitHub generated, and a version already on npm is not published twice.
 on:
   release:
     types: [published]
@@ -34,26 +38,40 @@ jobs:
       - run: npm install --global npm@latest
       - run: pnpm install --frozen-lockfile
       - run: pnpm verify
-      # The tag names the release; an existing one is left alone, so re-running
-      # this workflow never rewrites a body someone wrote by hand. The body comes
-      # from CHANGELOG.md when that version has an entry, because a hand-written
-      # note is the one thing this job cannot invent.
+      # The notes are already written in CHANGELOG.md; a compare link is not a
+      # description of what changed, so a generated body is replaced and a written
+      # one is left alone.
       - name: Release this tag
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="$GITHUB_REF_NAME"
-          gh release view "$tag" >/dev/null 2>&1 && exit 0
-          version="${tag#v}"
-          notes=$(awk -v v="$version" '
-            $0 ~ "^## " v " " { inside = 1; next }
-            inside && /^## / { exit }
-            inside { print }
-          ' CHANGELOG.md)
-          if [ -n "$notes" ]; then
-            gh release create "$tag" --title "$tag" --notes "$notes"
-          else
-            gh release create "$tag" --title "$tag" --generate-notes
+          notes=$(mktemp)
+          .github/release-notes.sh "$tag" > "$notes"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            if [ -s "$notes" ]; then
+              gh release create "$tag" --title "$tag" --notes-file "$notes"
+            else
+              gh release create "$tag" --title "$tag" --generate-notes
+            fi
+            exit 0
           fi
-      - run: npm publish --access public
+          body=$(gh release view "$tag" --json body --jq .body)
+          case "$body" in
+            '**Full Changelog**'*)
+              if [ -s "$notes" ]; then
+                gh release edit "$tag" --notes-file "$notes"
+              fi
+              ;;
+          esac
+      # Publishing twice for one version is the one mistake that cannot be taken
+      # back, so the registry itself decides whether this run publishes.
+      - name: Publish to npm
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if npm view "@yaorenliang/dsh-notify@$version" version >/dev/null 2>&1; then
+            echo "@yaorenliang/dsh-notify@$version is already published; nothing to do"
+            exit 0
+          fi
+          npm publish --access public
