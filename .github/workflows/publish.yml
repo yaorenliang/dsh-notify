@@ -40,7 +40,8 @@ jobs:
       - run: pnpm verify
       # The notes are already written in CHANGELOG.md; a compare link is not a
       # description of what changed, so a generated body is replaced and a written
-      # one is left alone.
+      # one is left alone. Deleting a tag turns its release into a draft, so a
+      # draft is published rather than left invisible.
       - name: Release this tag
         if: startsWith(github.ref, 'refs/tags/')
         env:
@@ -57,14 +58,19 @@ jobs:
             fi
             exit 0
           fi
-          # A generated body is a compare link, and an empty body is what a
-          # broken earlier run left behind; both are repaired. A written body is
-          # someone's own work and is never touched.
-          body=$(gh release view "$tag" --json body --jq .body)
-          if [ -z "$body" ] || [ "${body#\*\*Full Changelog\*\*}" != "$body" ]; then
-            if [ -s "$notes" ]; then
-              gh release edit "$tag" --notes-file "$notes"
-            fi
+          draft=$(gh release view "$tag" --json isDraft --jq .isDraft)
+          body=$(gh release view "$tag" --json body --jq '.body // ""')
+          args=()
+          if [ -s "$notes" ]; then
+            case "$body" in
+              '' | '**Full Changelog**'*) args+=(--notes-file "$notes") ;;
+            esac
+          fi
+          if [ "$draft" = "true" ]; then
+            args+=(--draft=false)
+          fi
+          if [ ${#args[@]} -gt 0 ]; then
+            gh release edit "$tag" "${args[@]}"
           fi
       # Publishing twice for one version is the one mistake that cannot be taken
       # back, so the registry itself decides whether this run publishes.
