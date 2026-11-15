@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.6 — 2026-11-14
+## 0.1.7 — 2026-11-14
 
 Choosing a sound now plays it. The local picker plays the browser tone straight
 away, and the phone picker sends one push carrying the ring you just chose, so a
