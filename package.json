@@ -1,6 +1,6 @@
 {
   "name": "@yaorenliang/dsh-notify",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Unified notification plugin for DeepSeek Harness: browser notifications, sound, and Bark push over one event model.",
   "type": "module",
   "license": "MIT",
@@ -29,6 +29,7 @@
       "default": "./lib/client.js"
     },
     "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
     "./package.json": "./package.json"
   },
   "files": [
@@ -36,6 +37,9 @@
     "lib/client.js",
     "lib/types/**/*.d.ts",
     "cordis.patch.yml",
+    "locale/*.json",
+    "docs/DETAIL.md",
+    "docs/DETAIL.zh.md",
     "LICENSE",
     "README.md"
   ],

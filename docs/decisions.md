@@ -122,3 +122,25 @@ table with an enable switch, a browser sound, a Bark sound, and a preview.
 **Rejected.** Always-visible channel blocks (the earlier layout). Half the fields
 were disabled most of the time, which makes a settings page look broken rather than
 configured.
+
+## D10 — The plugin card is localized in the package, not in the market
+
+**Chosen.** `locale/en.json` and `locale/zh.json` carry `meta.title`,
+`meta.description` and `meta.detail`. Harness reads the English file as the
+dictionary's anchor and every sibling language file beside it, and the detail pane
+reads the Markdown `meta.detail` names for the first language in the reader's chain
+that declares one — so a Chinese reader sees 「会话通知」, a Chinese sentence, and
+`docs/DETAIL.zh.md` instead of the README.
+
+**Rejected.** Localizing only the market listing. The market (`dshmarket`) takes its
+card from a *catalog entry* (`description.zh` in the awesome-dsh-plugin repo) and
+never reads the package's locale files, while the Harness plugin page takes it from
+the package and never reads the catalog. One channel cannot serve the other, and the
+catalog only reaches Chinese installs once its npm snapshot is republished. The
+package is the half we control, so it is the half that ships.
+
+**Consequence.** The market card stays English until the catalog snapshot catches up;
+that is an upstream fix, not a change here. `test/locale.test.ts` pins the four ways
+this breaks silently: a missing `en.json`, a Chinese card copied from English, a
+`meta.detail` that leaves the package or does not ship, and a `files`/`exports` list
+that drops either the locales or the documents.

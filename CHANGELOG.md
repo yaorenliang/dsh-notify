@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.9 — 2026-11-17
+
+The plugin card in **Plugins** and in **Settings** now speaks the reader's
+language. Harness reads a package's card from `locale/en.json` and every sibling
+language file, so the two strings that used to live only in `package.json` now
+live in `locale/`: a Chinese reader gets 「会话通知」 with a Chinese sentence,
+everyone else gets the English one. Both files name a long description —
+`docs/DETAIL.zh.md` and `docs/DETAIL.md` — that the plugin detail pane shows in
+place of the README, so the Chinese page is Chinese all the way down.
+
+A test pins the four things that can silently break it: `en.json` must exist
+(without it the whole dictionary is empty and the card falls back to English),
+the Chinese card must not be a copy of the English one, `meta.detail` must name a
+Markdown file that ships and never leaves the package, and both `locale/*.json`
+and the two documents must stay in `exports` and `files`.
+
 ## 0.1.8 — 2026-11-15
 
 The preview button is gone. Choosing a sound already plays it, so the row now has

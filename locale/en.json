@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Session alerts",
+    "description": "Browser system notifications and Bark phone push from one plugin: each event is classified once on the Host, so both channels always agree — and quiet while you are watching the session.",
+    "detail": "docs/DETAIL.md"
+  }
+}
