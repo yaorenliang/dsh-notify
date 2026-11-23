@@ -10,6 +10,12 @@ One notification plugin for [DeepSeek Harness](https://github.com/deepseek-ai/ds
 
 Most setups end up with two plugins — one that shows browser notifications and one that pushes to a phone. They classify events independently, so they drift: the phone reports "turn 12 ended" while the browser reports "finished", an approval arrives twice, and a subagent's chatter leaks into both. `dsh-notify` classifies once on the Host, then fans the same event out to every channel.
 
+## Screenshots
+
+![dsh-notify screenshot: one decision on the Host, fanned out to a browser channel and a Bark channel](docs/showcase.png)
+
+The whole path in one picture: the Host decides once, five event kinds, a delivery policy, then two channels.
+
 ## What you get
 
 - **Browser channel** — system notifications with a per-kind sound, click to jump back to the session, collapse by kind so a burst stays one card.

@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>dsh-notify · 会话通知</title>
+<style>
+  :root {
+    --bg: #0d1017;
+    --panel: #151a23;
+    --panel2: #1a2029;
+    --line: #232b38;
+    --text: #e6edf6;
+    --muted: #8b98ab;
+    --dim: #5c6879;
+    --accent: #4d9fff;
+    --green: #4ec98a;
+    --red: #e06a6a;
+    --amber: #d9a441;
+    --purple: #a78bfa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+    padding: 56px 68px; -webkit-font-smoothing: antialiased;
+  }
+  .kicker { font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 13px; }
+  h1 { font-size: 40px; line-height: 1.15; font-weight: 650; letter-spacing: -0.02em; }
+  h1 span { color: var(--muted); font-weight: 400; }
+  .sub { margin-top: 15px; font-size: 16.5px; line-height: 1.7; color: var(--muted); max-width: 900px; }
+
+  .flow {
+    margin-top: 34px; display: flex; align-items: stretch; gap: 0;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 24px 26px;
+  }
+  .stage { flex: 1; min-width: 0; }
+  .stage-label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); font-weight: 600; margin-bottom: 12px; }
+  .chipbox {
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 9px;
+    padding: 11px 13px; font-size: 12.5px; line-height: 1.6; color: var(--muted);
+  }
+  .chipbox b { color: var(--text); font-weight: 600; }
+  .arrow { flex: none; width: 46px; display: flex; align-items: center; justify-content: center; color: #33405a; font-size: 19px; }
+
+  .split { display: flex; flex-direction: column; gap: 10px; }
+  .route { display: flex; align-items: center; gap: 10px; }
+  .route .tag {
+    flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em;
+    padding: 3px 7px; border-radius: 5px; text-transform: uppercase;
+  }
+  .tag.browser { background: #14243a; color: #6fb2ff; }
+  .tag.bark { background: #152a22; color: var(--green); }
+  .route .what { font-size: 12.5px; color: var(--muted); }
+
+  .grid { display: flex; gap: 16px; margin-top: 26px; align-items: flex-start; }
+  .card {
+    flex: 1; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 20px 22px;
+  }
+  .card h3 { font-size: 14.5px; font-weight: 620; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .evt { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px solid #1c2430; font-size: 12.5px; }
+  .evt:last-child { border-bottom: 0; }
+  .evt .name { flex: none; width: 74px; color: var(--text); font-weight: 550; }
+  .evt .desc { color: var(--dim); font-size: 12px; }
+  .evt .dot { margin-right: 2px; align-self: center; }
+
+  .note { display: flex; gap: 13px; padding: 12px 0; border-bottom: 1px solid #1c2430; font-size: 12.5px; line-height: 1.6; }
+  .note:last-child { border-bottom: 0; }
+  .note .k { flex: none; width: 88px; color: var(--dim); font-size: 12px; }
+  .note .v { color: var(--muted); }
+  .note .v b { color: var(--text); font-weight: 600; }
+
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; background: #1b2130; color: #9fc6f5; padding: 1px 5px; border-radius: 4px; }
+
+  .foot {
+    margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--line);
+    display: flex; gap: 30px; font-size: 12.5px; color: var(--dim);
+  }
+  .foot b { color: var(--muted); font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="kicker">DSH Plugin</div>
+  <h1>dsh-notify <span>· 会话通知</span></h1>
+  <p class="sub">浏览器系统通知与手机 Bark 推送，<b style="color:var(--text);font-weight:600">同一份判定</b>。常见做法是装两个插件各判各的，于是必然漂移——手机说第 12 轮结束、浏览器说完成、一次授权来两条。这个插件在宿主侧只判定一次，再把同一个事件分发给两条通道。</p>
+
+  <div class="flow">
+    <div class="stage">
+      <div class="stage-label">宿主侧</div>
+      <div class="chipbox">
+        <b>只判定一次</b><br>
+        turn/end · approval/request<br>user-questions/request
+      </div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="stage-label">分类</div>
+      <div class="chipbox">
+        <b>5 种事件</b><br>
+        完成 / 失败 / 中断<br>请求授权 / 等待回答
+      </div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="stage-label">送达策略</div>
+      <div class="chipbox">
+        <b>该不该打扰</b><br>
+        子会话静默 · 在线判定<br>逐类开关
+      </div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage" style="flex:1.15">
+      <div class="stage-label">两条通道</div>
+      <div class="split">
+        <div class="route">
+          <span class="tag browser">Browser</span>
+          <span class="what">系统通知 + 独立音效 + 点击跳回</span>
+        </div>
+        <div class="route">
+          <span class="tag bark">Bark</span>
+          <span class="what">APNs 推手机，浏览器关着也收</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card" style="flex:1.05">
+      <h3><span class="dot" style="background:var(--accent)"></span>五种事件，各有自己的声音</h3>
+      <div class="evt"><span class="dot" style="background:var(--green)"></span><span class="name">会话完成</span><span class="desc">一轮对话正常结束</span></div>
+      <div class="evt"><span class="dot" style="background:var(--red)"></span><span class="name">会话失败</span><span class="desc">出错中断，或宿主上报错误</span></div>
+      <div class="evt"><span class="dot" style="background:var(--amber)"></span><span class="name">会话中断</span><span class="desc">被取消或中途停止</span></div>
+      <div class="evt"><span class="dot" style="background:var(--purple)"></span><span class="name">请求授权</span><span class="desc">有操作需要你批准</span></div>
+      <div class="evt"><span class="dot" style="background:var(--accent)"></span><span class="name">等待回答</span><span class="desc">助手问了你一个问题</span></div>
+    </div>
+
+    <div class="card">
+      <h3><span class="dot" style="background:var(--green)"></span>通知长这样</h3>
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:12px 14px;">
+        <div style="font-size:12px;color:var(--dim);margin-bottom:7px;">DSH · 刚刚</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:5px;">✓ 会话行卡片三行布局</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.55;">第三行徽标左边再加一个预设的 code</div>
+      </div>
+      <div style="margin-top:11px;font-size:12px;color:var(--dim);line-height:1.65;">
+        标题是「状态标记 + 会话名」，正文是<b style="color:var(--muted)">你最后问的那句话</b>——定时任务这类没有提问的回合，回退到助手回答。
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="dot" style="background:var(--amber)"></span>默认安静</h3>
+      <div class="note"><span class="k">子会话</span><span class="v">默认<b>静默</b>，需要时再打开</span></div>
+      <div class="note"><span class="k">你正在看</span><span class="v">可设成<b>不打扰</b>，或只在切走时提醒</span></div>
+      <div class="note"><span class="k">同类连响</span><span class="v">合并成<b>一张卡片</b>，不刷屏</span></div>
+      <div class="note"><span class="k">在线过期</span><span class="v">过期的「在线」<b>不会吞掉</b>授权提醒</span></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span><b>一个设置页</b>：中英双语，两通道各有测试按钮</span>
+    <span><b>密钥留本机</b>：只显示「已配置 + 后四位」</span>
+    <span><b>走鉴权栅栏</b>：<code>/api/dsh-notify/*</code>，没有裸路由</span>
+  </div>
+</body>
+</html>
