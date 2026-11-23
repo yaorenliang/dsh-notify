@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>dsh-notify · session alerts</title>
+<style>
+  :root {
+    --bg: #0d1017; --panel: #151a23; --panel2: #1a2029; --line: #232b38;
+    --text: #e6edf6; --muted: #8b98ab; --dim: #5c6879;
+    --accent: #4d9fff; --green: #4ec98a; --red: #e06a6a; --amber: #d9a441; --purple: #a78bfa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    padding: 56px 68px; -webkit-font-smoothing: antialiased;
+  }
+  .kicker { font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 13px; }
+  h1 { font-size: 40px; line-height: 1.15; font-weight: 650; letter-spacing: -0.02em; }
+  h1 span { color: var(--muted); font-weight: 400; }
+  .sub { margin-top: 15px; font-size: 16.5px; line-height: 1.7; color: var(--muted); max-width: 940px; }
+  .sub b { color: var(--text); font-weight: 600; }
+
+  .flow {
+    margin-top: 34px; display: flex; align-items: stretch;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 24px 26px;
+  }
+  .stage { flex: 1; min-width: 0; }
+  .stage-label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); font-weight: 600; margin-bottom: 12px; }
+  .chipbox { background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; padding: 11px 13px; font-size: 12.5px; line-height: 1.6; color: var(--muted); }
+  .chipbox b { color: var(--text); font-weight: 600; }
+  .arrow { flex: none; width: 46px; display: flex; align-items: center; justify-content: center; color: #33405a; font-size: 19px; }
+
+  .split { display: flex; flex-direction: column; gap: 10px; }
+  .route { display: flex; align-items: center; gap: 10px; }
+  .route .tag { flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; padding: 3px 7px; border-radius: 5px; text-transform: uppercase; }
+  .tag.browser { background: #14243a; color: #6fb2ff; }
+  .tag.bark { background: #152a22; color: var(--green); }
+  .route .what { font-size: 12.5px; color: var(--muted); }
+
+  .grid { display: flex; gap: 16px; margin-top: 26px; align-items: flex-start; }
+  .card { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; }
+  .card h3 { font-size: 14.5px; font-weight: 620; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .evt { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px solid #1c2430; font-size: 12.5px; }
+  .evt:last-child { border-bottom: 0; }
+  .evt .name { flex: none; width: 82px; color: var(--text); font-weight: 550; }
+  .evt .desc { color: var(--dim); font-size: 12px; }
+  .evt .dot { margin-right: 2px; align-self: center; }
+
+  .note { display: flex; gap: 13px; padding: 12px 0; border-bottom: 1px solid #1c2430; font-size: 12.5px; line-height: 1.6; }
+  .note:last-child { border-bottom: 0; }
+  .note .k { flex: none; width: 92px; color: var(--dim); font-size: 12px; }
+  .note .v { color: var(--muted); }
+  .note .v b { color: var(--text); font-weight: 600; }
+
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; background: #1b2130; color: #9fc6f5; padding: 1px 5px; border-radius: 4px; }
+
+  .foot { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--line); display: flex; gap: 30px; font-size: 12.5px; color: var(--dim); }
+  .foot b { color: var(--muted); font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="kicker">DSH Plugin</div>
+  <h1>dsh-notify <span>· session alerts</span></h1>
+  <p class="sub">Browser system notifications and Bark phone push, <b>decided once</b>. Most setups end up with two plugins that classify events independently, so they drift — the phone says "turn 12 ended" while the browser says "finished", an approval arrives twice. This one classifies once on the Host, then fans the same event out to both channels.</p>
+
+  <div class="flow">
+    <div class="stage">
+      <div class="stage-label">On the Host</div>
+      <div class="chipbox">
+        <b>Classified once</b><br>
+        turn/end · approval/request<br>user-questions/request
+      </div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="stage-label">Classify</div>
+      <div class="chipbox">
+        <b>Five event kinds</b><br>
+        completed / failed / interrupted<br>approval / question
+      </div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="stage-label">Delivery policy</div>
+      <div class="chipbox">
+        <b>Should this interrupt?</b><br>
+        subagents silent · presence<br>per-kind switches
+      </div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage" style="flex:1.15">
+      <div class="stage-label">Two channels</div>
+      <div class="split">
+        <div class="route">
+          <span class="tag browser">Browser</span>
+          <span class="what">system notification, per-kind sound, click to return</span>
+        </div>
+        <div class="route">
+          <span class="tag bark">Bark</span>
+          <span class="what">APNs to your phone, browser closed or not</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card" style="flex:1.05">
+      <h3><span class="dot" style="background:var(--accent)"></span>Five events, each with a voice</h3>
+      <div class="evt"><span class="dot" style="background:var(--green)"></span><span class="name">Completed</span><span class="desc">a turn ended normally</span></div>
+      <div class="evt"><span class="dot" style="background:var(--red)"></span><span class="name">Failed</span><span class="desc">the turn errored, or the Host reported one</span></div>
+      <div class="evt"><span class="dot" style="background:var(--amber)"></span><span class="name">Interrupted</span><span class="desc">cancelled or stopped mid-turn</span></div>
+      <div class="evt"><span class="dot" style="background:var(--purple)"></span><span class="name">Approval</span><span class="desc">an action is waiting for your yes</span></div>
+      <div class="evt"><span class="dot" style="background:var(--accent)"></span><span class="name">Question</span><span class="desc">the agent asked you something</span></div>
+    </div>
+
+    <div class="card">
+      <h3><span class="dot" style="background:var(--green)"></span>What a notification says</h3>
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:12px 14px;">
+        <div style="font-size:12px;color:var(--dim);margin-bottom:7px;">DSH · now</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:5px;">✓ Session card rows</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.55;">add the agent preset on the badge line</div>
+      </div>
+      <div style="margin-top:11px;font-size:12px;color:var(--dim);line-height:1.65;">
+        The title is a status mark plus the session name; the body is <b style="color:var(--muted)">the last prompt you typed</b> — a scheduled turn with no prompt falls back to the answer.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="dot" style="background:var(--amber)"></span>Quiet by design</h3>
+      <div class="note"><span class="k">Subagents</span><span class="v"><b>silent</b> by default, turn on when needed</span></div>
+      <div class="note"><span class="k">The one open</span><span class="v">can stay <b>quiet</b>, or alert only once you switch away</span></div>
+      <div class="note"><span class="k">A burst</span><span class="v">collapses into <b>one card</b>, not a wall</span></div>
+      <div class="note"><span class="k">Stale presence</span><span class="v">an old "online" report <b>never hides</b> an approval</span></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span><b>One settings page</b>: bilingual, a test button per channel</span>
+    <span><b>Secrets stay local</b>: shown as "configured + last four"</span>
+    <span><b>Behind the auth fence</b>: <code>/api/dsh-notify/*</code>, no bare route</span>
+  </div>
+</body>
+</html>

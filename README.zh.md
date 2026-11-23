@@ -12,7 +12,7 @@
 
 ## 截图
 
-![dsh-notify 截图：宿主侧只判定一次，再分发到浏览器通道与 Bark 通道](docs/showcase.png)
+![dsh-notify 截图：宿主侧只判定一次，再分发到浏览器通道与 Bark 通道](docs/screenshot-notify.png)
 
 一张图讲完主链路：宿主侧判定 → 五类事件 → 送达策略 → 浏览器与手机两条通道。
 
@@ -86,6 +86,20 @@ pnpm build       # 宿主 ESM 入口 + 浏览器 lazy-CJS 产物
 ```
 
 目录：`src/core` 纯逻辑（不碰宿主、不碰 DOM，vitest 直接跑），`src/host` 负责判定与投递，`src/client` 负责呈现。
+
+## 文档
+
+更细的文档，中英各一份：
+
+| | |
+|---|---|
+| 架构 | [中文](./docs/architecture.zh.md) · [English](./docs/architecture.md) |
+| 设计取舍 | [中文](./docs/decisions.zh.md) · [English](./docs/decisions.md) |
+| 发布流程 | [中文](./docs/publishing.zh.md) · [English](./docs/publishing.md) |
+| 验证方式 | [中文](./docs/verification.zh.md) · [English](./docs/verification.md) |
+| 事件模型细节 | [中文](./docs/DETAIL.zh.md) · [English](./docs/DETAIL.md) |
+| 变更记录 | [中文](./CHANGELOG.zh.md) · [English](./CHANGELOG.md) |
+| 安全策略 | [中文](./SECURITY.zh.md) · [English](./SECURITY.md) |
 
 ## 许可
 

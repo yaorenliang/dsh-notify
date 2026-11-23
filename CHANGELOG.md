@@ -1,5 +1,7 @@
 # Changelog
 
+English | [中文](./CHANGELOG.zh.md)
+
 ## 0.1.9 — 2026-11-17
 
 The plugin card in **Plugins** and in **Settings** now speaks the reader's

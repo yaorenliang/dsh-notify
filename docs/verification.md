@@ -9,7 +9,7 @@ part once per machine.
 ```sh
 pnpm install
 pnpm typecheck     # tsc --noEmit, exit 0
-pnpm test          # vitest, 79 tests
+pnpm test          # vitest, the whole suite
 pnpm build         # lib/index.js + lib/client.js + lib/types
 ```
 

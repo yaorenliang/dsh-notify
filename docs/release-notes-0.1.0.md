@@ -1,5 +1,7 @@
 # v0.1.0 — one decision, two channels
 
+English | [中文](./release-notes-0.1.0.zh.md)
+
 First public release.
 
 ## Why

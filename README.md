@@ -12,7 +12,7 @@ Most setups end up with two plugins — one that shows browser notifications and
 
 ## Screenshots
 
-![dsh-notify screenshot: one decision on the Host, fanned out to a browser channel and a Bark channel](docs/showcase.png)
+![dsh-notify screenshot: one decision on the Host, fanned out to a browser channel and a Bark channel](docs/screenshot-notify-en.png)
 
 The whole path in one picture: the Host decides once, five event kinds, a delivery policy, then two channels.
 
@@ -87,6 +87,20 @@ node scripts/accept.mjs --test   # after a restart: check the live Host end to e
 ```
 
 Layout: `src/core` is pure logic (no Host, no DOM, runs under vitest), `src/host` owns classification and delivery, `src/client` owns presentation.
+
+## Documentation
+
+Deeper documents, each in English and Chinese:
+
+| | |
+|---|---|
+| Architecture | [English](./docs/architecture.md) · [中文](./docs/architecture.zh.md) |
+| Design decisions | [English](./docs/decisions.md) · [中文](./docs/decisions.zh.md) |
+| Publishing | [English](./docs/publishing.md) · [中文](./docs/publishing.zh.md) |
+| Verification | [English](./docs/verification.md) · [中文](./docs/verification.zh.md) |
+| Event model detail | [English](./docs/DETAIL.md) · [中文](./docs/DETAIL.zh.md) |
+| Changelog | [English](./CHANGELOG.md) · [中文](./CHANGELOG.zh.md) |
+| Security policy | [English](./SECURITY.md) · [中文](./SECURITY.zh.md) |
 
 ## License
 

@@ -1,5 +1,7 @@
 # Security
 
+English | [中文](./SECURITY.zh.md)
+
 ## What this plugin holds
 
 - A Bark device key (one string). It lives in `dsh-notify.json` inside the DSH
